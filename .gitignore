@@ -1,0 +1,4 @@
+*.db
+Full_Data/
+Batch\ Reports/
+__pycache__/

@@ -1,0 +1,254 @@
+#:import td datetime.timedelta
+#:import dt datetime.datetime
+#:import ut utils
+
+#:set lastday ut.lastTradingDay(ut.dbpath)
+
+ScreenManager:
+    StartScreen:
+        name: "start"
+    InputScreen:
+        name: "input"
+    MaintainScreen:
+        name: "maintain"
+    PasswordScreen:
+        name: "password"
+
+<IconListItem>:
+    IconLeftWidget:
+        icon: root.icon
+
+<StartScreen>:
+    MDFloatLayout:
+        id: ssbl
+        MDRectangleFlatButton:
+            id: title
+            text: "UI SYSTEM"
+            pos_hint: {"center_x": 0.5, "center_y": 0.87}
+            size_hint: (0.75, 0.2)
+            font_style: "H1"
+        MDRectangleFlatButton:
+            id: ssstart
+            text: "START"
+            pos_hint: {"center_x": 0.5, "center_y": 0.6}
+            size_hint: (0.4, 0.15)
+            on_release:
+                root.manager.current = "input"
+                root.manager.transition.direction = "left"
+            font_style: "H2"
+
+        MDRectangleFlatButton:
+            id: ssmaintain
+            text: "BATCH REPORT"
+            pos_hint: {"center_x": 0.5, "center_y": 0.4}
+            size_hint: (0.4, 0.15)
+            on_release: root.get_batch_report()
+            font_style: "H2"
+
+        MDRectangleFlatButton:
+            id: ssmaintain
+            text: "MAINTAIN"
+            pos_hint: {"center_x": 0.5, "center_y": 0.2}
+            size_hint: (0.4, 0.15)
+            on_release:
+                root.change_screen()
+            font_style: "H2"
+
+<InputScreen>:
+    MDBoxLayout:
+        id: isbl1
+        orientation: "vertical"
+        spacing: 10
+        padding: [10, 10, 10, 10]
+        MDBoxLayout:
+            id: widget_box
+            orientation: "horizontal"
+            #md_bg_color: (0, 0, 1, 1)
+            size_hint_y: 0.15
+            spacing: 10
+            MDIconButton:
+                id: isback
+                icon: "transfer-left"
+                icon_size: "64sp"
+                pos_hint: {"center_x": 0.5, "top": 0.5}
+                md_bg_color: (0, 1, 0, 1)
+                on_release:
+                    root.manager.current = "start"
+                    root.manager.transition.direction = "right"
+            MDBoxLayout:
+                orientation: "vertical"
+                #md_bg_color: (0, 1, 1, 1)
+                MDLabel:
+                    id: symbol_label
+                    text: "SYMBOL"
+                    halign: "center"
+                    pos_hint: {"right": 1}
+                    font_style: "Subtitle2"
+                    theme_text_color: "Primary"
+
+                MDDropDownItem:
+                    id: drop_item
+                    #md_bg_color: (1, 1, 1, 1)
+                    text: "Symbol"
+                    on_release: root.expand()
+
+            MDBoxLayout:
+                orientation: "vertical"
+                #md_bg_color: (0, 1, 1, 1)
+                MDLabel:
+                    id: startdate_label
+                    text: "STARTDATE"
+                    font_style: "Subtitle2"
+                    theme_text_color: "Primary"
+                MDBoxLayout:
+                    orientation: "horizontal"
+                    MDTextField:
+                        id: start_date_input
+                        font_style: "H6"
+                        text: str(ut.last14Tradingdays(lastday))
+                        theme_text_color: "Primary"
+                        helper_text: "Enter a date"
+                        helper_text_mode: "persistent"
+                        disabled: True
+
+                    MDIconButton:
+                        id: date_pick
+                        icon: "calendar-today"
+                        on_release: root.date_picker()
+
+            MDBoxLayout:
+                orientation: "vertical"
+                MDLabel:
+                    id: timeperiod_select
+                    text: "TIME PERIOD"
+                    font_style: "Subtitle2"
+                    theme_text_color: "Primary"
+
+                MDDropDownItem:
+                    id: tp_drop
+                    text: "Time Period"
+                    on_release: root.tp_expand()
+
+            MDBoxLayout:
+                orientation: "vertical"
+                MDLabel:
+                    id: frequency_select
+                    text: "FREQUENCY"
+                    font_style: "Subtitle2"
+                    theme_text_color: "Primary"
+
+                MDTextField:
+                    id: frequency_input
+                    text: "14"
+                    helper_text: "Enter the number of days"
+                    helper_text_mode: "persistent"
+                    font_style: "H6"
+                    theme_text_color: "Primary"
+
+            MDIconButton:
+                id: iscontinue
+                icon: "check-circle"
+                md_bg_color: (0, 1, 0, 1)
+                icon_size: "64sp"
+                active: False
+                on_release: root.validate()
+
+        MDBoxLayout:
+            id: table_box
+            RecycleView:
+                viewclass: 'MDLabel'
+                id: table_floor
+                data: []
+                RecycleGridLayout:
+                    id: table_floor_layout
+                    cols: 5
+                    default_size: (None,250)
+                    default_size_hint: (1,None)
+                    size_hint_y: None
+                    height: self.minimum_height
+
+<PasswordScreen>:
+    MDFloatLayout:
+        id: psbl
+        MDTextField:
+            id: pslogin
+            hint_text: "LOGIN ID"
+            size_hint: (0.8, 0.1)
+            theme_text_color: "Primary"
+            font_style: "H5"
+            helper_text: "Invalid Login ID"
+            helper_text_mode: "on_error"
+            error: True
+            mode: "fill"
+            pos_hint: {"center_x": 0.5, "center_y": 0.7}
+            line_anim: True
+            on_text: root.check_login()
+
+        MDTextField:
+            id: pspassword
+            hint_text: "PASSWORD"
+            theme_text_color: "Primary"
+            size_hint: (0.8, 0.1)
+            font_style: "H5"
+            helper_text: "Invalid Password"
+            helper_text_mode: "on_error"
+            error: True
+            mode: "fill"
+            pos_hint: {"center_x": 0.5, "center_y": 0.5}
+            line_anim: True
+            on_text: root.check_pass()
+
+        MDRectangleFlatButton:
+            id: psback
+            text: "Back"
+            font_style: "H1"
+            pos_hint: {"center_x": 0.4, "center_y": 0.3}
+            on_release:
+                root.manager.current = "start"
+                root.manager.transition.direction = "right"
+
+        MDRectangleFlatButton:
+            id: pssubmit
+            text: "Submit"
+            font_style: "H1"
+            pos_hint: {"center_x": 0.6, "center_y": 0.3}
+            on_release: root.submit()
+
+<MaintainScreen>:
+    MDBoxLayout:
+        id: msbl
+        orientation: "horizontal"
+        MDIconButton:
+            id: msback
+            icon: "transfer-left"
+            md_bg_color: (0, 1, 0, 1)
+            icon_size: "64sp"
+            on_release:
+                root.manager.current = "start"
+                root.manager.transition.direction = "right"
+
+        MDBoxLayout:
+            orientation: "vertical"
+            spacing: 20
+            MDRectangleFlatButton:
+                id: msdbupdate
+                text: "Update Database"
+                font_style: "H5"
+                on_release:
+                    root.updateDb(ut.dbpath)
+
+            MDRectangleFlatButton:
+                id: mssymupdate
+                text: "Update Symbols"
+                font_style: "H5"
+                on_release:
+                    root.updateSymbols()
+
+            MDRectangleFlatButton:
+                id: msholupdate
+                text: "Update NSE Holidays"
+                font_style: "H5"
+                on_release:
+                    root.updateHolidays()
+
+
