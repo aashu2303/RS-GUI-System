@@ -256,9 +256,9 @@ class MaintainScreen(Screen):
             while lastday < previousTradingDay(datetime.datetime.today().date()):
                 lastday += timedelta(days=1)
                 # print(lastday)
-                if lastday.strftime("%Y-%m-%d") not in nse_holidays:
+                if lastday.strftime("%Y/%m/%d") not in nse_holidays:
                     filepath = os.path.join(datapath, lastday.strftime("%Y-%m-%d") + bhavfilename)
-                    csvfile = os.path.join(datapath, lastday.strftime("%Y-%m-%d") + ".csv")
+                    csvfile = os.path.join(datapath, lastday.strftime("%Y-%m-%d") + "-NSE-EQ.csv")
 
                     try:
                         os.rename(filepath, csvfile)
@@ -514,10 +514,10 @@ class InputScreen(Screen):
             fp.write(json_obj)
 
         stock_data = self.get_data(settings)
-        print(stock_data)
+        #print(stock_data)
         dates = stock_data["DATE"].to_list()
         cols = stock_data.columns
-        print(dates)
+        #print(dates)
 
         table_data = []
         for c in cols:
@@ -536,7 +536,7 @@ class InputScreen(Screen):
                         label_dict['md_bg_color'] = (1, 0, 0, 0.75)
                 table_data.append(label_dict)  # append the data
 
-        print(table_data)
+        #print(table_data)
         self.ids['table_floor_layout'].cols = len(cols)
         self.ids['table_floor'].data = table_data
 
