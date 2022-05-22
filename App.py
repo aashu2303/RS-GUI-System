@@ -238,30 +238,61 @@ class MaintainScreen(Screen):
     def updateDb(self, dbpath):
         dbconn = sqlite3.connect(dbpath)
         lastday = lastTradingDay(dbpath)
-        while lastday < previousTradingDay(datetime.datetime.today().date()):
-            lastday += timedelta(days=1)
-            # print(lastday)
-            if lastday.strftime("%Y-%m-%d") not in nse_holidays:
-                filepath = os.path.join(datapath, lastday.strftime("%Y-%m-%d") + bhavfilename)
-                csvfile = os.path.join(datapath, lastday.strftime("%Y-%m-%d") + ".csv")
+        nofiles = []
+        if lastday == previousTradingDay(datetime.datetime.today().date()):
+            popup = MDDialog(
+                title="Data Up-to-date",
+                text="Data is up-to-date",
+                size_hint=(.5, .5),
+                buttons=[
+                    MDFlatButton(
+                        text="Cancel",
+                        on_release=lambda x: popup.dismiss()
+                    )
+                ]
+            )
+            popup.open()
+        else:
+            while lastday < previousTradingDay(datetime.datetime.today().date()):
+                lastday += timedelta(days=1)
+                # print(lastday)
+                if lastday.strftime("%Y-%m-%d") not in nse_holidays:
+                    filepath = os.path.join(datapath, lastday.strftime("%Y-%m-%d") + bhavfilename)
+                    csvfile = os.path.join(datapath, lastday.strftime("%Y-%m-%d") + ".csv")
 
-                try:
-                    os.rename(filepath, csvfile)
-                except FileNotFoundError:
-                    print(f"File {filepath} not found")
+                    try:
+                        os.rename(filepath, csvfile)
+                    except FileNotFoundError:
+                        nofiles.append(lastday.strftime("%Y-%m-%d"))
+                        continue
 
-                data = pd.read_csv(csvfile, delimiter=",",
-                                   names=["symbol", "date", "open", "high", "low", "close", "volume", "openI"])[
-                    ["symbol", "date", "close"]]
-                data['date'] = data['date'].apply(lambda x: f"{str(x)[:4]}/{str(x)[4:6]}/{str(x)[6:8]}")
-                data = data[data['symbol'].isin(symbols)]
-                try:
-                    data.to_sql(name="stocks", con=dbconn, if_exists="append", index=False)
-                except sqlite3.IntegrityError as e:
-                    print(f"{e} occured")
+                    data = pd.read_csv(csvfile, delimiter=",",
+                                       names=["symbol", "date", "open", "high", "low", "close", "volume", "openI"])[
+                        ["symbol", "date", "close"]]
+                    data['date'] = data['date'].apply(lambda x: f"{str(x)[:4]}/{str(x)[4:6]}/{str(x)[6:8]}")
+                    data = data[data['symbol'].isin(symbols)]
+                    try:
+                        data.to_sql(name="stocks", con=dbconn, if_exists="append", index=False)
+                    except sqlite3.IntegrityError as e:
+                        print(f"{e} occured")
+            if len(nofiles) > 0:
+                text = f"The files corresponding to following dates were not found:\n{nofiles}"
+                popup = MDDialog(
+                    title="Files not found",
+                    text=text,
+                    size=(0.5, 0.5),
+                    buttons=[
+                        MDFlatButton(
+                            text="Cancel",
+                            on_release=lambda x: popup.dismiss()
+                        )
+                    ]
+                )
+                popup.open()
 
     def updateSymbols(self):
         file = filechooser.open_file()
+
         print(file)
 
     def updateHolidays(self):
@@ -412,34 +443,37 @@ class InputScreen(Screen):
         db_conn = sqlite3.connect(database=dbpath)
         cur = db_conn.cursor()
         columns = list(map(lambda x: x[0].upper(), cur.execute(columns_query)))
-        data = pd.DataFrame(cur.execute("SELECT * FROM stocks WHERE symbol=:sym", {"sym": settings['symbol']}),
-                            columns=columns).loc[:, ("DATE", "CLOSE")][::-1]
-        data["DATE"] = data["DATE"].apply(datetime.datetime.strptime, args=("%Y/%m/%d",))
-        data["DATE"] = data["DATE"].apply(lambda x: x.date())
 
-        startdate = datetime.datetime.strptime(settings['startdate'], "%Y-%m-%d").date()
-
+        # data["DATE"] = data["DATE"].apply(lambda x: datetime.datetime.strptime(x, "%Y/%m/%d").date())
+        # startdate = datetime.datetime.strptime(settings['startdate'], "%Y-%m-%d").date()
+        #
         if settings['timeperiod'] == "Daily":
-            data = data[(data["DATE"] >= startdate)][::-1].reset_index(drop=True)
+            startdate = last30daysDaily(lastTradingDay(dbpath))
+            data = pd.DataFrame(cur.execute("SELECT * FROM stocks WHERE symbol=:sym and date >= :dt",
+                                            {"sym": settings['symbol'],
+                                             "dt": startdate.strftime('%Y/%m/%d')}).fetchall(), columns=columns)
+            print(data)
             final_data = self.process(data, settings)
             return final_data
         elif settings['timeperiod'] != "Time Period":
             day = settings['timeperiod'].split(" - ")[-1]
-            data = data[(data["DATE"] >= startdate)][::-1].reset_index(drop=True)
             dates = []
-
-            while (startdate <= lastTradingDay(dbpath)):
-                if startdate.strftime("%A") == day:
-                    prev_date = previousTradingDay(startdate).strftime("%Y/%m/%d")
+            date = lastTradingDay(dbpath)
+            count = 30
+            while (count > 0):
+                if date.strftime("%A") == day:
+                    prev_date = previousTradingDay(date).strftime("%Y/%m/%d")
                     dates.append(prev_date)
-                    startdate += timedelta(days=7)
+                    date -= timedelta(days=7)
+                    count -= 1
                 else:
-                    startdate += timedelta(days=1)
+                    date -= timedelta(days=1)
 
-            for i in range(len(data)):
-                if data.loc[i, "DATE"].strftime("%Y/%m/%d") not in dates:
-                    data = data.drop(i)
-            data = data.reset_index(drop=True)
+            startdate = dates[-1]
+            data = pd.DataFrame(cur.execute("SELECT * FROM stocks WHERE symbol=:sym and date >= :dt",
+                                            {"sym": settings['symbol'],
+                                                "dt": startdate}).fetchall(), columns=columns)
+            data = data[data['DATE'].isin(dates)].reset_index(drop=True)
             final_data = self.process(data, settings)
             return final_data
 
@@ -465,7 +499,7 @@ class InputScreen(Screen):
             data.loc[i, "RS"] = round(data.loc[i, "LAST n POS"] / data.loc[i, "LAST n NEG"], 2)
         data = data[::-1].reset_index(drop=True)
 
-        return data
+        return data[(data["LAST n POS"] != 0) & (data["LAST n NEG"] != 0)].reset_index(drop=True)
 
     def build(self):
         symbol = self.ids['drop_item'].text
@@ -480,6 +514,7 @@ class InputScreen(Screen):
             fp.write(json_obj)
 
         stock_data = self.get_data(settings)
+        print(stock_data)
         dates = stock_data["DATE"].to_list()
         cols = stock_data.columns
         print(dates)

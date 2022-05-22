@@ -1,6 +1,6 @@
 {
     "symbol": "ACC",
-    "startdate": "2022-04-26",
-    "timeperiod": "Daily",
+    "startdate": "2022-01-01",
+    "timeperiod": "Weekly - Friday",
     "frequency": 14
 }

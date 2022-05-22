@@ -40,6 +40,26 @@ def last14Tradingdays(date):
             count -= 1
     return date
 
+def last30daysDaily(date):
+    count = 30
+    while(count > 0):
+        if isHoliday(date):
+            date -= timedelta(days=1)
+        else:
+            date -= timedelta(days=1)
+            count -= 1
+    return date
+
+def lasy30daysWeekly(date, day):
+    count = 30
+    while (count > 0):
+        if date.strftime("%A") == day:
+            date -= timedelta(days=7)
+            count -= 1
+        else:
+            date -= timedelta(days=1)
+    return date
+
 def last14daysWeekly(date, day):
     count = 17
     while (count > 0):
