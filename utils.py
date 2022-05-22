@@ -12,8 +12,8 @@ nse_holidays = list(map(lambda x: x[0], sqlite3.connect(dbpath).cursor().execute
 symbols = list(map(lambda x: x[0], sqlite3.connect(dbpath).cursor().execute(symbols_query)))
 cwd = os.getcwd()
 report_dir_path = os.path.join(cwd, 'Batch Reports')
-datapath = os.path.join(cwd, "Full_Data")
-bhavfilename = f"-NSE-EQ.txt"
+datapath = r"C:\BHAVCOPY\EQ"
+bhavfilename = r"-NSE-EQ.txt"
 
 def isHoliday(date):
     name = date.strftime("%A")
