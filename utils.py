@@ -10,6 +10,7 @@ PASSWORD = "Aaseesh@4143"
 dbpath = os.path.join(os.getcwd(), "stockdata.db")
 nse_holidays = list(map(lambda x: x[0], sqlite3.connect(dbpath).cursor().execute("SELECT * FROM nse_holidays")))
 symbols = list(map(lambda x: x[0], sqlite3.connect(dbpath).cursor().execute(symbols_query)))
+columns = list(map(lambda x: x[0], sqlite3.connect(dbpath).cursor().execute(columns_query)))
 cwd = os.getcwd()
 report_dir_path = os.path.join(cwd, 'Batch Reports')
 datapath = r"C:\BHAVCOPY\EQ"

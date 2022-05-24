@@ -89,11 +89,13 @@ ScreenManager:
 
                 MDTextField:
                     id: drop_item
-                    #md_bg_color: (1, 1, 1, 1)
+                    pos_hint: {'center_x': .5, 'center_y': .6}
+                    size_hint_x: None
+                    text: ""
+                    width: "200dp"
                     hint_text: "Select Symbol"
-                    size_hint: (0.8, 1)
-                    on_focus: root.expand()
-                    on_text: root.expand()
+                    on_focus: if self.focus: root.set_menu()
+                    on_text: if self.focus: root.set_menu()
 
             MDBoxLayout:
                 orientation: "vertical"
@@ -253,5 +255,3 @@ ScreenManager:
                 font_style: "H5"
                 on_release:
                     root.updateHolidays()
-
-

@@ -11,6 +11,7 @@ from kivymd.uix.dialog import MDDialog
 from kivy.properties import StringProperty
 from kivymd.uix.picker import MDDatePicker
 from kivy.core.window import Window
+from kivymd.uix.textfield import MDTextField
 from plyer import filechooser
 from utils import *
 import datetime
@@ -255,7 +256,6 @@ class MaintainScreen(Screen):
         else:
             while lastday < previousTradingDay(datetime.datetime.today().date()):
                 lastday += timedelta(days=1)
-                # print(lastday)
                 if lastday.strftime("%Y/%m/%d") not in nse_holidays:
                     filepath = os.path.join(datapath, lastday.strftime("%Y-%m-%d") + bhavfilename)
                     csvfile = os.path.join(datapath, lastday.strftime("%Y-%m-%d") + "-NSE-EQ.csv")
@@ -299,26 +299,27 @@ class MaintainScreen(Screen):
         file = filechooser.open_file()
         print(file)
 
-
 class InputScreen(Screen):
     menu = None
-    def expand(self):
+    print("Entered Input Screen")
+    def set_menu(self):
         selected_symbols = symbols
         if not self.ids['drop_item'].text.isspace():
-            selected_symbols = list(filter(lambda x: x.startswith(self.ids['drop_item'].text.upper()), symbols))
-
+            selected_symbols = [sym for sym in symbols if self.ids['drop_item'].text.upper() in sym.upper()]
         menu_items = [
             {
                 "viewclass": "IconListItem",
                 "icon": "currency-inr",
-                "text": sym,
                 "height": dp(56),
+                "text": sym,
                 "on_release": lambda x=sym: self.set_item(x, "drop_item"),
-            } for sym in selected_symbols
-        ]
+
+            } for sym in selected_symbols]
+
         if self.menu:
             self.menu.dismiss()
             self.menu = None
+
         self.menu = MDDropdownMenu(
             caller=self.ids['drop_item'],
             items=menu_items,
@@ -327,8 +328,8 @@ class InputScreen(Screen):
         )
         self.menu.open()
 
-    def set_item(self, text_item, id):
-        self.ids[id].text = text_item
+    def set_item(self, item, id):
+        self.ids[id].text = item
         self.menu.dismiss()
 
     def on_save(self, instance, value, date_range):
@@ -444,7 +445,6 @@ class InputScreen(Screen):
     def get_data(self, settings):
         db_conn = sqlite3.connect(database=dbpath)
         cur = db_conn.cursor()
-        columns = list(map(lambda x: x[0].upper(), cur.execute(columns_query)))
 
         # data["DATE"] = data["DATE"].apply(lambda x: datetime.datetime.strptime(x, "%Y/%m/%d").date())
         # startdate = datetime.datetime.strptime(settings['startdate'], "%Y-%m-%d").date()
@@ -459,7 +459,7 @@ class InputScreen(Screen):
 
             data = pd.DataFrame(cur.execute("SELECT * FROM stocks WHERE symbol=:sym and date >= :dt",
                                             {"sym": settings['symbol'],
-                                             "dt": startdate.strftime('%Y/%m/%d')}).fetchall(), columns=columns).drop("symbol")
+                                             "dt": startdate.strftime('%Y/%m/%d')}).fetchall(), columns=columns)
             final_data = self.process(data, settings)
             return final_data
 
@@ -487,39 +487,39 @@ class InputScreen(Screen):
 
     def process(self, data, settings):
         n = len(data)
-        data["POS"] = np.zeros(n)
-        data["NEG"] = np.zeros(n)
-        data["LAST n POS"] = np.zeros(n)
-        data["LAST n NEG"] = np.zeros(n)
-        data["RS"] = np.zeros(n)
-        data["ROC"] = np.zeros(n)
+        data["pos"] = np.zeros(n)
+        data["neg"] = np.zeros(n)
+        data["last n pos"] = np.zeros(n)
+        data["last n neg"] = np.zeros(n)
+        data["rs"] = np.zeros(n)
+        data["roc"] = np.zeros(n)
 
         for i in range(1, n):
-            data.loc[i, "POS"] = round(max(0, data.loc[i, "CLOSE"] - data.loc[i - 1, "CLOSE"]), 2)
-            data.loc[i, "NEG"] = -round(min(0, data.loc[i, "CLOSE"] - data.loc[i - 1, "CLOSE"]), 2)
+            data.loc[i, "pos"] = round(max(0, data.loc[i, "close"] - data.loc[i - 1, "close"]), 2)
+            data.loc[i, "neg"] = -round(min(0, data.loc[i, "close"] - data.loc[i - 1, "close"]), 2)
 
         data = data[::-1].reset_index(drop=True)
 
         for i in range(0, n - settings['frequency']):
-            data.loc[i, 'LAST n POS'] = round(np.sum(data.loc[i: i + settings['frequency'] - 1, "POS"]), 2)
-            data.loc[i, 'LAST n NEG'] = round(np.sum(data.loc[i: i + settings['frequency'] - 1, "NEG"]), 2)
-            data.loc[i, "ROC"] = round(data.loc[i, "CLOSE"] / data.loc[i + 13, "CLOSE"], 2)
-            data.loc[i, "RS"] = round(data.loc[i, "LAST n POS"] / data.loc[i, "LAST n NEG"], 2)
+            data.loc[i, 'last n pos'] = round(np.sum(data.loc[i: i + settings['frequency'] - 1, "pos"]), 2)
+            data.loc[i, 'last n neg'] = round(np.sum(data.loc[i: i + settings['frequency'] - 1, "neg"]), 2)
+            data.loc[i, "roc"] = round(data.loc[i, "close"] / data.loc[i + 13, "close"], 2)
+            data.loc[i, "rs"] = round(data.loc[i, "last n pos"] / data.loc[i, "last n neg"], 2)
         data = data[::-1].reset_index(drop=True)
         print(data)
-        return data[(data["LAST n POS"] != 0) & (data["LAST n NEG"] != 0)].reset_index(drop=True)
+        return data[(data["last n pos"] != 0) & (data["last n neg"] != 0)].reset_index(drop=True)
 
     def build(self, settings):
-        stock_data = self.get_data(settings)
+        stock_data = self.get_data(settings).drop("symbol", axis=1)
         #print(stock_data)
-        dates = stock_data["DATE"].to_list()
-        cols = stock_data.columns
+        dates = stock_data["date"].to_list()
+        cols = stock_data.columns.to_list()
         #print(dates)
 
         table_data = []
         for c in cols:
             table_data.append(
-                {'text': c, 'size_hint_y': None, 'height': 30, "line_width": (0, 0, 0, 1), "halign": "center",
+                {'text': c.upper(), 'size_hint_y': None, 'height': 30, "line_width": (0, 0, 0, 1), "halign": "center",
                  'md_bg_color': (.85, .80, .30, 1)})  # append the data
 
         for z in range(len(dates)):
@@ -527,9 +527,9 @@ class InputScreen(Screen):
                 label_dict = {'text': str(stock_data.loc[z, y]), "line_color": (0, 0, 0, 1), "halign": "center",
                               'size_hint_y': None, 'height': 20}
                 if y == "RS" and z > 0:
-                    if stock_data.loc[z, "RS"] > 1 and stock_data.loc[z - 1, "RS"] < 1:
+                    if stock_data.loc[z, "rs"] > 1 and stock_data.loc[z - 1, "rs"] < 1:
                         label_dict['md_bg_color'] = (0, 1, 0, 0.75)
-                    if stock_data.loc[z, "RS"] < 1 and stock_data.loc[z - 1, "RS"] > 1:
+                    if stock_data.loc[z, "rs"] < 1 and stock_data.loc[z - 1, "rs"] > 1:
                         label_dict['md_bg_color'] = (1, 0, 0, 0.75)
                 table_data.append(label_dict)  # append the data
 
