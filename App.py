@@ -14,7 +14,7 @@ from kivy.core.window import Window
 from plyer import filechooser
 from utils import *
 import datetime
-import json
+import time
 
 manager = ScreenManager()
 Window.set_title("Trading Strategy Visualizer")
@@ -301,8 +301,12 @@ class MaintainScreen(Screen):
 
 
 class InputScreen(Screen):
+    menu = None
     def expand(self):
-        self.symbols = symbols
+        selected_symbols = symbols
+        if not self.ids['drop_item'].text.isspace():
+            selected_symbols = list(filter(lambda x: x.startswith(self.ids['drop_item'].text.upper()), symbols))
+
         menu_items = [
             {
                 "viewclass": "IconListItem",
@@ -310,15 +314,17 @@ class InputScreen(Screen):
                 "text": sym,
                 "height": dp(56),
                 "on_release": lambda x=sym: self.set_item(x, "drop_item"),
-            } for sym in self.symbols
+            } for sym in selected_symbols
         ]
+        if self.menu:
+            self.menu.dismiss()
+            self.menu = None
         self.menu = MDDropdownMenu(
             caller=self.ids['drop_item'],
             items=menu_items,
             position="bottom",
             width_mult=4,
         )
-        self.menu.bind()
         self.menu.open()
 
     def set_item(self, text_item, id):
@@ -331,13 +337,13 @@ class InputScreen(Screen):
         self.ids['start_date_input'].helper_text = "Valid Date"
 
     def date_picker(self):
-        todate = last14Tradingdays(min(datetime.datetime.today().date(), lastTradingDay(dbpath)))
+        todate = datetime.datetime.today().date()
         date_dialog = MDDatePicker(year=todate.year, month=todate.month, day=todate.day)
         date_dialog.bind(on_save=self.on_save)
         date_dialog.open()
 
     def tp_expand(self):
-        symbols = ["Daily", "Weekly - Monday", "Weekly - Tuesday", "Weekly - Wednesday", "Weekly - Thursday",
+        self.symbols = ["Daily", "Weekly - Monday", "Weekly - Tuesday", "Weekly - Wednesday", "Weekly - Thursday",
                    "Weekly - Friday"]
         menu_items = [
             {
@@ -346,7 +352,7 @@ class InputScreen(Screen):
                 "text": sym,
                 "height": dp(56),
                 "on_release": lambda x=sym: self.set_item(x, "tp_drop"),
-            } for sym in symbols
+            } for sym in self.symbols
         ]
         self.menu = MDDropdownMenu(
             caller=self.ids['tp_drop'],
@@ -362,9 +368,8 @@ class InputScreen(Screen):
 
     def validate(self):
         symbol = self.ids['drop_item'].text
-        startdate = datetime.datetime.strptime(self.ids['start_date_input'].text, "%Y-%m-%d").date()
         timeperiod = self.ids['tp_drop'].text.split(" - ")[-1]
-        cur = sqlite3.connect(dbpath).cursor()
+        frequency = int(self.ids['frequency_input'].text)
         if symbol not in symbols:
             popup = MDDialog(
                 title="Invalid Symbol",
@@ -381,49 +386,43 @@ class InputScreen(Screen):
             popup.open()
             return False
 
-        if timeperiod == "Daily":
-            rqd_data = last14Tradingdays(min(datetime.datetime.today().date(), lastTradingDay(dbpath)))
-            if startdate <= rqd_data:
-                # print("Valid - Daily")
-                self.build()
-                return True
-            # print("Invalid - Daily")
-            popup = MDDialog(
-                title="Insufficient Data Points",
-                text=f"Select a date before {rqd_data}",
-                buttons=[
-                    MDFlatButton(
-                        text="CANCEL",
-                        theme_text_color="Error",
-                        on_release=lambda x: popup.dismiss()
-                    )
-                ],
-                type="alert"
-            )
-            popup.open()
-            return False
-        elif timeperiod != "Time Period":
-            rqd_date = last14daysWeekly(lastTradingDay(dbpath), timeperiod)
-            if startdate <= rqd_date:
-                # print("Valid - Weekly")
-                self.build()
-                return True
-            # print("Invalid - Weekly")
-            popup = MDDialog(
-                title="Insufficient Data Points",
-                text=f"Select a date before {rqd_date}",
-                buttons=[
-                    MDFlatButton(
-                        text="CANCEL",
-                        theme_text_color="Error",
-                        on_release=lambda x: popup.dismiss()
-                    )
-                ],
-                type="alert"
-            )
-            popup.open()
-            return False
-        elif timeperiod == "Time Period":
+        try:
+            startdate = datetime.datetime.strptime(self.ids['start_date_input'].text, "%Y-%m-%d").date()
+            if startdate > lastTradingDay(dbpath):
+                popup = MDDialog(
+                    title="Invalid Date",
+                    text="Cannot calculate the RS table for days after last trading day",
+                    buttons=[
+                        MDFlatButton(
+                            text="CANCEL",
+                            theme_text_color="Error",
+                            on_release=lambda x: popup.dismiss()
+                        )
+                    ],
+                    type="alert"
+                )
+                popup.open()
+                return False
+            elif startdate > lastndaysdaily(lastTradingDay(dbpath), frequency):
+                popup = MDDialog(
+                    title="Insufficient datapoints",
+                    text=f"Select a date before {lastndaysdaily(lastTradingDay(dbpath), frequency).strftime('%Y-%m-%d')}",
+                    buttons=[
+                        MDFlatButton(
+                            text="CANCEL",
+                            theme_text_color="Error",
+                            on_release=lambda x: popup.dismiss()
+                        )
+                    ],
+                    type="alert"
+                )
+                popup.open()
+                return False
+
+        except ValueError:
+            startdate = None
+
+        if timeperiod not in self.symbols:
             popup = MDDialog(
                 title="Invalid TimePeriod",
                 text=f"Select a valid time period - Daily/Weekday",
@@ -439,6 +438,9 @@ class InputScreen(Screen):
             popup.open()
             return False
 
+        settings = {"symbol": symbol, "startdate": startdate, "timeperiod": timeperiod, "frequency": frequency}
+        self.build(settings)
+
     def get_data(self, settings):
         db_conn = sqlite3.connect(database=dbpath)
         cur = db_conn.cursor()
@@ -446,21 +448,27 @@ class InputScreen(Screen):
 
         # data["DATE"] = data["DATE"].apply(lambda x: datetime.datetime.strptime(x, "%Y/%m/%d").date())
         # startdate = datetime.datetime.strptime(settings['startdate'], "%Y-%m-%d").date()
-        #
         if settings['timeperiod'] == "Daily":
-            startdate = last30daysDaily(lastTradingDay(dbpath))
+            if settings['startdate'] is None:
+                tmp = lastndaysdaily(lastTradingDay(dbpath), settings['frequency'])
+                startdate = lastndaysdaily(tmp, settings['frequency'])
+            else:
+                startdate = lastndaysdaily(settings['startdate'], settings['frequency'])
+
+            print(startdate)
+
             data = pd.DataFrame(cur.execute("SELECT * FROM stocks WHERE symbol=:sym and date >= :dt",
                                             {"sym": settings['symbol'],
-                                             "dt": startdate.strftime('%Y/%m/%d')}).fetchall(), columns=columns)
-            print(data)
+                                             "dt": startdate.strftime('%Y/%m/%d')}).fetchall(), columns=columns).drop("symbol")
             final_data = self.process(data, settings)
             return final_data
+
         elif settings['timeperiod'] != "Time Period":
             day = settings['timeperiod'].split(" - ")[-1]
             dates = []
             date = lastTradingDay(dbpath)
             count = 30
-            while (count > 0):
+            while count > 0:
                 if date.strftime("%A") == day:
                     prev_date = previousTradingDay(date).strftime("%Y/%m/%d")
                     dates.append(prev_date)
@@ -498,21 +506,10 @@ class InputScreen(Screen):
             data.loc[i, "ROC"] = round(data.loc[i, "CLOSE"] / data.loc[i + 13, "CLOSE"], 2)
             data.loc[i, "RS"] = round(data.loc[i, "LAST n POS"] / data.loc[i, "LAST n NEG"], 2)
         data = data[::-1].reset_index(drop=True)
-
+        print(data)
         return data[(data["LAST n POS"] != 0) & (data["LAST n NEG"] != 0)].reset_index(drop=True)
 
-    def build(self):
-        symbol = self.ids['drop_item'].text
-        startdate = self.ids['start_date_input'].text
-        timeperiod = self.ids["tp_drop"].text
-        frequency = int(self.ids['frequency_input'].text)
-
-        settings = {"symbol": symbol, "startdate": startdate, "timeperiod": timeperiod, "frequency": frequency}
-        json_obj = json.dumps(
-            settings, indent=4)
-        with open("settings.json", "w") as fp:
-            fp.write(json_obj)
-
+    def build(self, settings):
         stock_data = self.get_data(settings)
         #print(stock_data)
         dates = stock_data["DATE"].to_list()

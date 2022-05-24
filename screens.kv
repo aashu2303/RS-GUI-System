@@ -87,11 +87,13 @@ ScreenManager:
                     font_style: "Subtitle2"
                     theme_text_color: "Primary"
 
-                MDDropDownItem:
+                MDTextField:
                     id: drop_item
                     #md_bg_color: (1, 1, 1, 1)
-                    text: "Symbol"
-                    on_release: root.expand()
+                    hint_text: "Select Symbol"
+                    size_hint: (0.8, 1)
+                    on_focus: root.expand()
+                    on_text: root.expand()
 
             MDBoxLayout:
                 orientation: "vertical"
@@ -106,7 +108,7 @@ ScreenManager:
                     MDTextField:
                         id: start_date_input
                         font_style: "H6"
-                        text: str(ut.last14Tradingdays(lastday))
+                        text: f"Select a date"
                         theme_text_color: "Primary"
                         helper_text: "Enter a date"
                         helper_text_mode: "persistent"
@@ -152,7 +154,7 @@ ScreenManager:
                 md_bg_color: (0, 1, 0, 1)
                 icon_size: "64sp"
                 active: False
-                on_release: root.build()
+                on_release: root.validate()
 
         MDBoxLayout:
             id: table_box

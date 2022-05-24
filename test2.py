@@ -1,62 +1,83 @@
-from kivy.app import App
-from kivy.uix.boxlayout import BoxLayout
-from kivy.lang import Builder
+from kivy.properties import ListProperty, StringProperty
+from kivy.uix.button import Button
+from kivy.uix.dropdown import DropDown
+from kivy.uix.textinput import TextInput
 
-#kv codes
-Builder.load_string('''
-<DataTable>:
-    id: main_win
-    RecycleView:
-        viewclass: 'CustomLabel'
-        id: table_floor
-        RecycleGridLayout:
-            id: table_floor_layout
-            cols: 5
-            default_size: (None,250)
-            default_size_hint: (1,None)
-            size_hint_y: None
-            height: self.minimum_height
-            spacing: 5
 
-<CustomLabel@Label>:
-    bcolor: (1,1,1,1)
-    canvas.before:
-        Color:
-            rgba: root.bcolor
-        Rectangle:
-            size: self.size
-            pos: self.pos
-''')
+class Chooser(TextInput):
+    choicesfile = StringProperty()
+    choiceslist = ListProperty([])
 
-class DataTable(BoxLayout):
-    def __init__(self,table='', **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, **kwargs):
+        self.choicesfile = kwargs.pop('choicesfile', '')  # each line of file is one possible choice
+        self.choiceslist = kwargs.pop('choiceslist', [])  # list of choices
+        super(Chooser, self).__init__(**kwargs)
+        self.multiline = False
+        self.halign = 'left'
+        self.bind(choicesfile=self.load_choices)
+        self.bind(text=self.on_text)
+        self.load_choices()
+        self.dropdown = None
 
-        data = {
-            '1':{0:'TESTa',1:'Sample1a',2:'Sample2a',3:'Sample3a'},
-            '2':{0:'TESTb',1:'Sample1b',2:'Sample2b',3:'Sample3b'},
-            '3':{0:'TESTc',1:'Sample1c',2:'Sample2c',3:'Sample3c'},
-        } #data store
+    def open_dropdown(self, *args):
+        if self.dropdown:
+            self.dropdown.open(self)
 
-        column_titles = [x for x in data.keys()]
-        rows_length = len(data[column_titles[0]])
-        self.columns = len(column_titles)
+    def load_choices(self):
+        if self.choicesfile:
+            with open(self.choicesfile) as fd:
+                for line in fd:
+                    self.choiceslist.append(line.strip('\n'))
+        self.values = []
 
-        table_data = []
-        for y in column_titles:
-            table_data.append({'text':str(y),'size_hint_y':None,'height':30,'bcolor':(.05,.30,.80,1)}) #append the data
+    def keyboard_on_key_down(self, window, keycode, text, modifiers):
+        if self.suggestion_text and keycode[0] == ord('\r'):  # enter selects current suggestion
+            self.suggestion_text = ' '  # setting suggestion_text to '' screws everything
+            self.text = self.values[0]
+            if self.dropdown:
+                self.dropdown.dismiss()
+                self.dropdown = None
+        else:
+            super(Chooser, self).keyboard_on_key_down(window, keycode, text, modifiers)
 
-        for z in range(rows_length):
-            for y in column_titles:
-                table_data.append({'text':str(data[y][z]),'size_hint_y':None,'height':20,'bcolor':(.06,.25,.50,1)}) #append the data
-        print(table_data)
-        print(self.columns)
-        self.ids.table_floor_layout.cols = self.columns #define value of cols to the value of self.columns
-        self.ids.table_floor.data = table_data #add table_data to data value
+    def on_text(self, chooser, text):
+        if self.dropdown:
+            self.dropdown.dismiss()
+            self.dropdown = None
+        if text == '':
+            return
+        values = []
+        for addr in self.choiceslist:
+            if addr.startswith(text):
+                values.append(addr)
+        self.values = values
+        if len(values) > 0:
+            if len(self.text) < len(self.values[0]):
+                self.suggestion_text = self.values[0][len(self.text):]
+            else:
+                self.suggestion_text = ' '  # setting suggestion_text to '' screws everything
+            self.dropdown = DropDown()
+            for val in self.values:
+                self.dropdown.add_widget(Button(text=val, size_hint_y=None, height=48, on_release=self.do_choose))
+            self.dropdown.open(self)
 
-class DataTableApp(App):
-    def build(self):
-        return DataTable()
+    def do_choose(self, butt):
+        self.text = butt.text
+        if self.dropdown:
+            self.dropdown.dismiss()
+            self.dropdown = None
 
-if __name__=='__main__':
-    DataTableApp().run()
+if __name__ == '__main__':
+    from kivy.app import App
+    from kivy.uix.relativelayout import RelativeLayout
+
+    class TestApp(App):
+        def build(self):
+            layout = RelativeLayout()
+            choices = ['Abba', 'dabba', 'doo']
+            chooser = Chooser(choiceslist=choices, hint_text='Enter one of Fred\'s words', size_hint=(0.5,None), height=30, pos_hint={'center_x':0.5, 'center_y':0.5})
+            layout.add_widget(chooser)
+            return layout
+
+
+    TestApp().run()

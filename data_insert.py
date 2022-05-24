@@ -60,5 +60,8 @@ def daily_append():
     print("Done")
 
 
+
 if __name__ == '__main__':
-    daily_append()
+    # os.rename("C:/Users/aasee/Downloads/Telegram Desktop/SYMBOLLIST (2).xlsx", "C:/Users/aasee/Downloads/Telegram Desktop/SYMBOLLIST.csv")
+    data = pd.read_csv("Full_Data/symbols.csv", delimiter="\s+", names=['symbol', 'flag'])
+    data.to_sql(name='symbol_list', con=dbconn, if_exists="replace", index=False)
