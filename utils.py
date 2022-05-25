@@ -31,7 +31,7 @@ def lastTradingDay(path):
 
 def lastndaysdaily(date, freq):
     count = freq
-    while(count > 0):
+    while count > 0:
         if isHoliday(date):
             date -= timedelta(days=1)
         else:
@@ -39,19 +39,18 @@ def lastndaysdaily(date, freq):
             count -= 1
     return date
 
-def lastndaysweekly(date, freq):
-    count = freq
-    while(count > 0):
-        if isHoliday(date):
-            date -= timedelta(days=1)
-        else:
+def lastndaysweekly(date, freq, day):
+    count = 1
+    while count < freq:
+        if date.strftime("%A") == day:
+            count += 1
             date -= timedelta(days=7)
-            count -= 1
-    return date
-
+        else:
+            date -= timedelta(days=1)
+    return previousTradingDay(date)
 
 def previousTradingDay(date):
-    while(isHoliday(date)):
+    while isHoliday(date):
         date -= timedelta(days=1)
     else:
         return date
@@ -82,4 +81,4 @@ def updateDb(dbpath):
 
     return False
 if __name__ == '__main__':
-    updateDb(dbpath)
+    previousTradingDay(datetime.datetime.strptime("2022-05-03", "%Y-%m-%d").date())

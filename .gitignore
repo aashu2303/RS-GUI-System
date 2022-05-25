@@ -2,3 +2,5 @@
 Full_Data/
 Batch\ Reports/
 __pycache__/
+*.xlsx
+*.csv

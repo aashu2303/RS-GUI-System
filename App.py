@@ -452,16 +452,18 @@ class InputScreen(Screen):
         # startdate = datetime.datetime.strptime(settings['startdate'], "%Y-%m-%d").date()
         if settings['timeperiod'] == "Daily":
             if settings['startdate'] is None:
-                tmp = lastndaysdaily(lastTradingDay(dbpath), settings['frequency'])
-                startdate = lastndaysdaily(tmp, settings['frequency'])
+                # tmp = lastndaysdaily(lastTradingDay(dbpath), settings['frequency'])
+                startdate = lastndaysdaily(lastTradingDay(dbpath), 2 * settings['frequency'])
             else:
-                startdate = lastndaysdaily(settings['startdate'], settings['frequency'])
+                startdate = lastndaysdaily(settings['startdate'], 2 * settings['frequency'])
 
             # print(startdate)
 
             data = pd.DataFrame(cur.execute("SELECT * FROM stocks WHERE symbol=:sym and date >= :dt",
                                             {"sym": settings['symbol'],
                                              "dt": startdate.strftime('%Y/%m/%d')}).fetchall(), columns=columns)
+            # print(data)
+            # print(len(data))
             final_data = self.process(data, settings)
             return final_data
 
@@ -469,21 +471,24 @@ class InputScreen(Screen):
             day = settings['timeperiod'].split(" - ")[-1]
             dates = []
             date = lastTradingDay(dbpath)
-            count = 30
+            count = 2 * settings['frequency']
             while count > 0:
                 if date.strftime("%A") == day:
-                    prev_date = previousTradingDay(date).strftime("%Y/%m/%d")
-                    dates.append(prev_date)
+                    dates.append(previousTradingDay(date).strftime("%Y/%m/%d"))
                     date -= timedelta(days=7)
                     count -= 1
                 else:
                     date -= timedelta(days=1)
-
+            dates.append(previousTradingDay(date).strftime("%Y/%m/%d"))
+            # print(dates)
+            # print(date)
+            # print(len(dates))
             startdate = dates[-1]
             data = pd.DataFrame(cur.execute("SELECT * FROM stocks WHERE symbol=:sym and date >= :dt",
-                                            {"sym": settings['symbol'],
-                                                "dt": startdate}).fetchall(), columns=columns)
+                                            {"sym": settings['symbol'], "dt": startdate}).fetchall(), columns=columns)
+            # print(len(data))
             data = data[data['date'].isin(dates)].reset_index(drop=True)
+            # print(len(data))
             final_data = self.process(data, settings)
             return final_data
 
@@ -513,6 +518,7 @@ class InputScreen(Screen):
 
     def build(self, settings):
         stock_data = self.get_data(settings).drop("symbol", axis=1)
+        # print(stock_data)
         self.refresh_view(stock_data)
 
     def create_data(self, stock_data):
@@ -526,9 +532,10 @@ class InputScreen(Screen):
             tmp_lbl = MDLabel(text=c.upper())
             tmp_lbl.size_hint_y = None
             tmp_lbl.height = 40
-            tmp_lbl.line_width = (0, 0, 0, 1)
+            tmp_lbl.line_width = 1
             tmp_lbl.halign = "center"
-            tmp_lbl.md_bg_color = (.85, .80, .30, 1)
+            tmp_lbl.md_bg_color = (.85, .80, .30, 0.8)
+            tmp_lbl.line_color = (0, 0, 0, 1)
             col_data.append(tmp_lbl)
         table_data.append(col_data)
 
@@ -538,22 +545,23 @@ class InputScreen(Screen):
                 tmp_lbl = MDLabel(text=str(stock_data.loc[i, c]))
                 tmp_lbl.size_hint_y = None
                 tmp_lbl.height = 30
-                tmp_lbl.line_width = (0, 0, 0, 1)
+                tmp_lbl.line_width = 1
+                tmp_lbl.line_color = (0, 0, 0, 0.5)
                 tmp_lbl.halign = "center"
 
-                if i in [0, 1, 2]:
-                    tmp_lbl.md_bg_color = (.85, .30, .30, 0.6)
+                if i in [len(dates)-14, len(dates)-13, len(dates)-12]:
+                    tmp_lbl.md_bg_color = (.85, .30, .30, 0.5)
 
-                # if i == np.argmax(stock_data['rs']):
-                #    label_dict['md_bg_color'] = (0, 1, 0, 1)
-                # elif i == np.argmin(stock_data['rs']):
-                #    label_dict['md_bg_color'] = (1, 0, 0, 1)
+                if i == np.argmax(stock_data['rs']) and c == "rs":
+                   tmp_lbl.md_bg_color = (0, 1, 0, 1)
+                elif i == np.argmin(stock_data['rs']) and c == "rs":
+                   tmp_lbl.md_bg_color = (1, 0, 0, 1)
 
                 if c.lower() == "rs" and i > 0:
                     if stock_data.loc[i, c] > 1 and stock_data.loc[i - 1, c] < 1:
-                        tmp_lbl.md_bg_color = (.30, 1, .30, 1)
+                        tmp_lbl.md_bg_color = (.30, 1, .30, 0.7)
                     elif stock_data.loc[i, c] < 1 and stock_data.loc[i - 1, c] > 1:
-                        tmp_lbl.md_bg_color = (1, .30, .30, 1)
+                        tmp_lbl.md_bg_color = (1, .30, .30, 0.7)
                 row_data.append(tmp_lbl)
             table_data.append(row_data)
 
@@ -562,14 +570,18 @@ class InputScreen(Screen):
     def refresh_view(self, data):
         data, cols, dates = self.create_data(data)
         table_obj = self.ids['table_box']
-        table_obj.cols = len(cols)
-        table_obj.rows = len(dates)+1
         if self.table_set:
             table_obj.clear_widgets()
+        table_obj.cols = len(cols)
+        table_obj.rows = len(dates)+1
+
 
         for lbl in data:
             table_obj.add_widget(lbl)
-
+        # print(len(data))
+        # print(len(cols))
+        # print(len(dates)+1)
+        # assert len(data) == len(cols) * (len(dates)+1)
 
         self.table_set = True
 
