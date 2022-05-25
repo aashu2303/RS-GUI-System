@@ -1,3 +1,4 @@
+import time
 import pandas as pd
 import numpy as np
 from kivymd.app import MDApp
@@ -9,13 +10,14 @@ from kivymd.uix.button import MDFlatButton
 from kivymd.uix.list import OneLineIconListItem
 from kivymd.uix.dialog import MDDialog
 from kivy.properties import StringProperty
+from kivymd.uix.label import MDLabel
+from kivy.uix.recycleview import RecycleView
+from kivy.uix.recyclegridlayout import RecycleGridLayout
 from kivymd.uix.picker import MDDatePicker
 from kivy.core.window import Window
-from kivymd.uix.textfield import MDTextField
 from plyer import filechooser
 from utils import *
 import datetime
-import time
 
 manager = ScreenManager()
 Window.set_title("Trading Strategy Visualizer")
@@ -301,7 +303,9 @@ class MaintainScreen(Screen):
 
 class InputScreen(Screen):
     menu = None
+    table_set = False
     print("Entered Input Screen")
+    timeperiods = ["Daily", "Weekly - Monday", "Weekly - Tuesday", "Weekly - Wednesday", "Weekly - Thursday", "Weekly - Friday"]
     def set_menu(self):
         selected_symbols = symbols
         if not self.ids['drop_item'].text.isspace():
@@ -344,8 +348,6 @@ class InputScreen(Screen):
         date_dialog.open()
 
     def tp_expand(self):
-        self.timeperiods = ["Daily", "Monday", "Tuesday", "Wednesday", "Thursday",
-                   "Friday"]
         menu_items = [
             {
                 "viewclass": "IconListItem",
@@ -369,7 +371,7 @@ class InputScreen(Screen):
 
     def validate(self):
         symbol = self.ids['drop_item'].text
-        timeperiod = self.ids['tp_drop'].text.split(" - ")[-1]
+        timeperiod = self.ids['tp_drop'].text
         frequency = int(self.ids['frequency_input'].text)
         if symbol not in symbols:
             popup = MDDialog(
@@ -511,48 +513,65 @@ class InputScreen(Screen):
 
     def build(self, settings):
         stock_data = self.get_data(settings).drop("symbol", axis=1)
-        #print(stock_data)
+        self.refresh_view(stock_data)
+
+    def create_data(self, stock_data):
         dates = stock_data["date"].to_list()
         cols = stock_data.columns.to_list()
-        #print(dates)
-
-
-        # Create the RecycleView object here and call this everytime the object is changed
+        # print(dates)
 
         table_data = []
-        col_data = [{'text': c.upper(), 'size_hint_y': None, 'height': 30, "line_width": (0, 0, 0, 1), "halign": "center",
-                     'md_bg_color': (.85, .80, .30, 1)} for c in cols]
+        col_data = []
+        for c in cols:
+            tmp_lbl = MDLabel(text=c.upper())
+            tmp_lbl.size_hint_y = None
+            tmp_lbl.height = 40
+            tmp_lbl.line_width = (0, 0, 0, 1)
+            tmp_lbl.halign = "center"
+            tmp_lbl.md_bg_color = (.85, .80, .30, 1)
+            col_data.append(tmp_lbl)
         table_data.append(col_data)
 
         for i in range(len(dates)):
             row_data = []
             for c in cols:
-                label_dict = {'text': str(stock_data.loc[i, c]), 'size_hint_y': None, 'height': 30, "line_width": (0, 0, 0, 1), "halign": "center"}
+                tmp_lbl = MDLabel(text=str(stock_data.loc[i, c]))
+                tmp_lbl.size_hint_y = None
+                tmp_lbl.height = 30
+                tmp_lbl.line_width = (0, 0, 0, 1)
+                tmp_lbl.halign = "center"
 
                 if i in [0, 1, 2]:
-                    label_dict['md_bg_color'] = (.85, .30, .30, 0.6)
+                    tmp_lbl.md_bg_color = (.85, .30, .30, 0.6)
 
-                #if i == np.argmax(stock_data['rs']):
+                # if i == np.argmax(stock_data['rs']):
                 #    label_dict['md_bg_color'] = (0, 1, 0, 1)
-                #elif i == np.argmin(stock_data['rs']):
+                # elif i == np.argmin(stock_data['rs']):
                 #    label_dict['md_bg_color'] = (1, 0, 0, 1)
 
                 if c.lower() == "rs" and i > 0:
                     if stock_data.loc[i, c] > 1 and stock_data.loc[i - 1, c] < 1:
-                        label_dict['md_bg_color'] = (.30, 1, .30, 1)
+                        tmp_lbl.md_bg_color = (.30, 1, .30, 1)
                     elif stock_data.loc[i, c] < 1 and stock_data.loc[i - 1, c] > 1:
-                        label_dict['md_bg_color'] = (1, .30, .30, 1)
-                row_data.append(label_dict)
+                        tmp_lbl.md_bg_color = (1, .30, .30, 1)
+                row_data.append(tmp_lbl)
             table_data.append(row_data)
 
+        return np.array(table_data, dtype=object).flatten(), cols, dates
 
-        table_data = np.array(table_data, dtype=object).flatten().tolist()
-        #print(table_data)
+    def refresh_view(self, data):
+        data, cols, dates = self.create_data(data)
+        table_obj = self.ids['table_box']
+        table_obj.cols = len(cols)
+        table_obj.rows = len(dates)+1
+        if self.table_set:
+            table_obj.clear_widgets()
 
-        self.ids['table_floor_layout'].cols = len(cols)
-        self.ids['table_floor'].data = table_data
-        self.ids['table_floor'].refresh_from_data()
+        for lbl in data:
+            table_obj.add_widget(lbl)
 
+
+        self.table_set = True
 
 class PasswordScreen(Screen):
 

@@ -158,20 +158,11 @@ ScreenManager:
                 active: False
                 on_release: root.validate()
 
-        MDBoxLayout:
+        MDGridLayout:
             id: table_box
 
-            RecycleView:
-                viewclass: 'MDLabel'
-                id: table_floor
-                data: []
-                RecycleGridLayout:
-                    id: table_floor_layout
-                    cols: 5
-                    default_size: (None,250)
-                    default_size_hint: (1,None)
-                    size_hint_y: None
-                    height: self.minimum_height
+
+
 
 <PasswordScreen>:
     MDFloatLayout:
