@@ -530,12 +530,12 @@ class InputScreen(Screen):
                 label_dict = {'text': str(stock_data.loc[i, c]), 'size_hint_y': None, 'height': 30, "line_width": (0, 0, 0, 1), "halign": "center"}
 
                 if i in [0, 1, 2]:
-                    label_dict['md_bg_color'] = (.85, .30, .30, 1)
+                    label_dict['md_bg_color'] = (.85, .30, .30, 0.6)
 
-                if i == np.argmax(stock_data['rs']):
-                    label_dict['md_bg_color'] = (0, 1, 0, 1)
-                elif i == np.argmin(stock_data['rs']):
-                    label_dict['md_bg_color'] = (1, 0, 0, 1)
+                #if i == np.argmax(stock_data['rs']):
+                #    label_dict['md_bg_color'] = (0, 1, 0, 1)
+                #elif i == np.argmin(stock_data['rs']):
+                #    label_dict['md_bg_color'] = (1, 0, 0, 1)
 
                 if c.lower() == "rs" and i > 0:
                     if stock_data.loc[i, c] > 1 and stock_data.loc[i - 1, c] < 1:
@@ -547,7 +547,7 @@ class InputScreen(Screen):
 
 
         table_data = np.array(table_data, dtype=object).flatten().tolist()
-        print(table_data)
+        #print(table_data)
 
         self.ids['table_floor_layout'].cols = len(cols)
         self.ids['table_floor'].data = table_data
