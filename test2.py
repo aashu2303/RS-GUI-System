@@ -1,83 +1,77 @@
-from kivy.properties import ListProperty, StringProperty
-from kivy.uix.button import Button
-from kivy.uix.dropdown import DropDown
-from kivy.uix.textinput import TextInput
+from kivy.app import App
+from kivy.lang import Builder
+from kivy.uix.recycleview import RecycleView
+from kivy.uix.recycleview.views import RecycleDataViewBehavior
+from kivy.uix.label import Label
+from kivy.properties import BooleanProperty
+from kivy.uix.recycleboxlayout import RecycleBoxLayout
+from kivy.uix.behaviors import FocusBehavior
+from kivy.uix.recycleview.layout import LayoutSelectionBehavior
+
+Builder.load_string('''
+<SelectableLabel>:
+    # Draw a background to indicate selection
+    canvas.before:
+        Color:
+            rgba: (.0, 0.9, .1, .3) if self.selected else (0, 0, 0, 1)
+        Rectangle:
+            pos: self.pos
+            size: self.size
+<RV>:
+    viewclass: 'SelectableLabel'
+    SelectableRecycleBoxLayout:
+        default_size: None, dp(56)
+        default_size_hint: 1, None
+        size_hint_y: None
+        height: self.minimum_height
+        orientation: 'vertical'
+        multiselect: True
+        touch_multiselect: True
+''')
 
 
-class Chooser(TextInput):
-    choicesfile = StringProperty()
-    choiceslist = ListProperty([])
+class SelectableRecycleBoxLayout(FocusBehavior, LayoutSelectionBehavior,
+                                 RecycleBoxLayout):
+    ''' Adds selection and focus behaviour to the view. '''
 
-    def __init__(self, **kwargs):
-        self.choicesfile = kwargs.pop('choicesfile', '')  # each line of file is one possible choice
-        self.choiceslist = kwargs.pop('choiceslist', [])  # list of choices
-        super(Chooser, self).__init__(**kwargs)
-        self.multiline = False
-        self.halign = 'left'
-        self.bind(choicesfile=self.load_choices)
-        self.bind(text=self.on_text)
-        self.load_choices()
-        self.dropdown = None
 
-    def open_dropdown(self, *args):
-        if self.dropdown:
-            self.dropdown.open(self)
+class SelectableLabel(RecycleDataViewBehavior, Label):
+    ''' Add selection support to the Label '''
+    index = None
+    selected = BooleanProperty(False)
+    selectable = BooleanProperty(True)
 
-    def load_choices(self):
-        if self.choicesfile:
-            with open(self.choicesfile) as fd:
-                for line in fd:
-                    self.choiceslist.append(line.strip('\n'))
-        self.values = []
+    def refresh_view_attrs(self, rv, index, data):
+        ''' Catch and handle the view changes '''
+        self.index = index
+        return super(SelectableLabel, self).refresh_view_attrs(
+            rv, index, data)
 
-    def keyboard_on_key_down(self, window, keycode, text, modifiers):
-        if self.suggestion_text and keycode[0] == ord('\r'):  # enter selects current suggestion
-            self.suggestion_text = ' '  # setting suggestion_text to '' screws everything
-            self.text = self.values[0]
-            if self.dropdown:
-                self.dropdown.dismiss()
-                self.dropdown = None
+    def on_touch_down(self, touch):
+        ''' Add selection on touch down '''
+        if super(SelectableLabel, self).on_touch_down(touch):
+            return True
+        if self.collide_point(*touch.pos) and self.selectable:
+            return self.parent.select_with_touch(self.index, touch)
+
+    def apply_selection(self, rv, index, is_selected):
+        ''' Respond to the selection of items in the view. '''
+        self.selected = is_selected
+        if is_selected:
+            print("selection changed to {0}".format(rv.data[index]))
         else:
-            super(Chooser, self).keyboard_on_key_down(window, keycode, text, modifiers)
+            print("selection removed for {0}".format(rv.data[index]))
 
-    def on_text(self, chooser, text):
-        if self.dropdown:
-            self.dropdown.dismiss()
-            self.dropdown = None
-        if text == '':
-            return
-        values = []
-        for addr in self.choiceslist:
-            if addr.startswith(text):
-                values.append(addr)
-        self.values = values
-        if len(values) > 0:
-            if len(self.text) < len(self.values[0]):
-                self.suggestion_text = self.values[0][len(self.text):]
-            else:
-                self.suggestion_text = ' '  # setting suggestion_text to '' screws everything
-            self.dropdown = DropDown()
-            for val in self.values:
-                self.dropdown.add_widget(Button(text=val, size_hint_y=None, height=48, on_release=self.do_choose))
-            self.dropdown.open(self)
 
-    def do_choose(self, butt):
-        self.text = butt.text
-        if self.dropdown:
-            self.dropdown.dismiss()
-            self.dropdown = None
+class RV(RecycleView):
+    def __init__(self, **kwargs):
+        super(RV, self).__init__(**kwargs)
+        self.data = [{'text': str(x)} for x in range(100)]
+
+
+class TestApp(App):
+    def build(self):
+        return RV()
 
 if __name__ == '__main__':
-    from kivy.app import App
-    from kivy.uix.relativelayout import RelativeLayout
-
-    class TestApp(App):
-        def build(self):
-            layout = RelativeLayout()
-            choices = ['Abba', 'dabba', 'doo']
-            chooser = Chooser(choiceslist=choices, hint_text='Enter one of Fred\'s words', size_hint=(0.5,None), height=30, pos_hint={'center_x':0.5, 'center_y':0.5})
-            layout.add_widget(chooser)
-            return layout
-
-
     TestApp().run()

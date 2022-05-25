@@ -455,7 +455,7 @@ class InputScreen(Screen):
             else:
                 startdate = lastndaysdaily(settings['startdate'], settings['frequency'])
 
-            print(startdate)
+            # print(startdate)
 
             data = pd.DataFrame(cur.execute("SELECT * FROM stocks WHERE symbol=:sym and date >= :dt",
                                             {"sym": settings['symbol'],
@@ -506,7 +506,7 @@ class InputScreen(Screen):
             data.loc[i, "roc"] = round(data.loc[i, "close"] / data.loc[i + 13, "close"], 2)
             data.loc[i, "rs"] = round(data.loc[i, "last n pos"] / data.loc[i, "last n neg"], 2)
         data = data[::-1].reset_index(drop=True)
-        print(data)
+        # print(data)
         return data[(data["last n pos"] != 0) & (data["last n neg"] != 0)].reset_index(drop=True)
 
     def build(self, settings):
@@ -516,26 +516,42 @@ class InputScreen(Screen):
         cols = stock_data.columns.to_list()
         #print(dates)
 
+
+        # Create the RecycleView object here and call this everytime the object is changed
+
         table_data = []
-        for c in cols:
-            table_data.append(
-                {'text': c.upper(), 'size_hint_y': None, 'height': 30, "line_width": (0, 0, 0, 1), "halign": "center",
-                 'md_bg_color': (.85, .80, .30, 1)})  # append the data
+        col_data = [{'text': c.upper(), 'size_hint_y': None, 'height': 30, "line_width": (0, 0, 0, 1), "halign": "center",
+                     'md_bg_color': (.85, .80, .30, 1)} for c in cols]
+        table_data.append(col_data)
 
-        for z in range(len(dates)):
-            for y in cols:
-                label_dict = {'text': str(stock_data.loc[z, y]), "line_color": (0, 0, 0, 1), "halign": "center",
-                              'size_hint_y': None, 'height': 20}
-                if y == "RS" and z > 0:
-                    if stock_data.loc[z, "rs"] > 1 and stock_data.loc[z - 1, "rs"] < 1:
-                        label_dict['md_bg_color'] = (0, 1, 0, 0.75)
-                    if stock_data.loc[z, "rs"] < 1 and stock_data.loc[z - 1, "rs"] > 1:
-                        label_dict['md_bg_color'] = (1, 0, 0, 0.75)
-                table_data.append(label_dict)  # append the data
+        for i in range(len(dates)):
+            row_data = []
+            for c in cols:
+                label_dict = {'text': str(stock_data.loc[i, c]), 'size_hint_y': None, 'height': 30, "line_width": (0, 0, 0, 1), "halign": "center"}
 
-        #print(table_data)
+                if i in [0, 1, 2]:
+                    label_dict['md_bg_color'] = (.85, .30, .30, 1)
+
+                if i == np.argmax(stock_data['rs']):
+                    label_dict['md_bg_color'] = (0, 1, 0, 1)
+                elif i == np.argmin(stock_data['rs']):
+                    label_dict['md_bg_color'] = (1, 0, 0, 1)
+
+                if c.lower() == "rs" and i > 0:
+                    if stock_data.loc[i, c] > 1 and stock_data.loc[i - 1, c] < 1:
+                        label_dict['md_bg_color'] = (.30, 1, .30, 1)
+                    elif stock_data.loc[i, c] < 1 and stock_data.loc[i - 1, c] > 1:
+                        label_dict['md_bg_color'] = (1, .30, .30, 1)
+                row_data.append(label_dict)
+            table_data.append(row_data)
+
+
+        table_data = np.array(table_data, dtype=object).flatten().tolist()
+        print(table_data)
+
         self.ids['table_floor_layout'].cols = len(cols)
         self.ids['table_floor'].data = table_data
+        self.ids['table_floor'].refresh_from_data()
 
 
 class PasswordScreen(Screen):
