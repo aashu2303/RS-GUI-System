@@ -344,8 +344,8 @@ class InputScreen(Screen):
         date_dialog.open()
 
     def tp_expand(self):
-        self.symbols = ["Daily", "Weekly - Monday", "Weekly - Tuesday", "Weekly - Wednesday", "Weekly - Thursday",
-                   "Weekly - Friday"]
+        self.timeperiods = ["Daily", "Monday", "Tuesday", "Wednesday", "Thursday",
+                   "Friday"]
         menu_items = [
             {
                 "viewclass": "IconListItem",
@@ -353,7 +353,7 @@ class InputScreen(Screen):
                 "text": sym,
                 "height": dp(56),
                 "on_release": lambda x=sym: self.set_item(x, "tp_drop"),
-            } for sym in self.symbols
+            } for sym in self.timeperiods
         ]
         self.menu = MDDropdownMenu(
             caller=self.ids['tp_drop'],
@@ -423,7 +423,7 @@ class InputScreen(Screen):
         except ValueError:
             startdate = None
 
-        if timeperiod not in self.symbols:
+        if timeperiod not in self.timeperiods:
             popup = MDDialog(
                 title="Invalid TimePeriod",
                 text=f"Select a valid time period - Daily/Weekday",
@@ -481,7 +481,7 @@ class InputScreen(Screen):
             data = pd.DataFrame(cur.execute("SELECT * FROM stocks WHERE symbol=:sym and date >= :dt",
                                             {"sym": settings['symbol'],
                                                 "dt": startdate}).fetchall(), columns=columns)
-            data = data[data['DATE'].isin(dates)].reset_index(drop=True)
+            data = data[data['date'].isin(dates)].reset_index(drop=True)
             final_data = self.process(data, settings)
             return final_data
 
