@@ -553,15 +553,15 @@ class InputScreen(Screen):
                     tmp_lbl.md_bg_color = (.85, .30, .30, 0.5)
 
                 if i == np.argmax(stock_data['rs']) and c == "rs":
-                   tmp_lbl.md_bg_color = (0, 1, 0, 1)
-                elif i == np.argmin(stock_data['rs']) and c == "rs":
                    tmp_lbl.md_bg_color = (1, 0, 0, 1)
+                elif i == np.argmin(stock_data['rs']) and c == "rs":
+                   tmp_lbl.md_bg_color = (0, 1, 0, 1)
 
                 if c.lower() == "rs" and i > 0:
                     if stock_data.loc[i, c] > 1 and stock_data.loc[i - 1, c] < 1:
-                        tmp_lbl.md_bg_color = (.30, 1, .30, 0.7)
+                        tmp_lbl.md_bg_color = (.30, 1, .30, 0.5)
                     elif stock_data.loc[i, c] < 1 and stock_data.loc[i - 1, c] > 1:
-                        tmp_lbl.md_bg_color = (1, .30, .30, 0.7)
+                        tmp_lbl.md_bg_color = (1, .30, .30, 0.5)
                 row_data.append(tmp_lbl)
             table_data.append(row_data)
 
