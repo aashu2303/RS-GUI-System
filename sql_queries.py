@@ -16,3 +16,7 @@ insert_query = """
     INSERT INTO stocks(symbol, date, close)
     VALUES(:symbol, :date, :close)
 """
+
+selected_symbols_query = """
+    SELECT * FROM stocks where symbol in (select symbol from symbol_list where flag='Y')
+"""

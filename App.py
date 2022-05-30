@@ -11,8 +11,8 @@ from kivymd.uix.list import OneLineIconListItem
 from kivymd.uix.dialog import MDDialog
 from kivy.properties import StringProperty
 from kivymd.uix.label import MDLabel
-from kivy.uix.recycleview import RecycleView
-from kivy.uix.recyclegridlayout import RecycleGridLayout
+from kivymd.uix.button import MDRectangleFlatButton
+from kivymd.uix.gridlayout import MDGridLayout
 from kivymd.uix.picker import MDDatePicker
 from kivy.core.window import Window
 from plyer import filechooser
@@ -60,13 +60,13 @@ class StartScreen(Screen):
         for name, frame in data:
             frame = frame[::-1].reset_index(drop=True)
             try:
-                close = np.array(frame.loc[:, "CLOSE"])
+                close = np.array(frame.loc[:, "close"])
                 pos_1 = [max(0, x) for x in (close[:14] - close[1:15])]
                 pos_2 = [max(0, x) for x in (close[1:15] - close[2:16])]
                 neg_1 = [-min(0, x) for x in (close[:14] - close[1:15])]
                 neg_2 = [-min(0, x) for x in (close[1:15] - close[2:16])]
-                rs_1 = np.sum(pos_1) / np.sum(neg_1)
-                rs_2 = np.sum(pos_2) / np.sum(neg_2)
+                rs_1 = round(np.sum(pos_1) / np.sum(neg_1), 2)
+                rs_2 = round(np.sum(pos_2) / np.sum(neg_2), 2)
                 if rs_1 <= 0.3:
                     RS_LS0P3.append((name, rs_1))
                 if rs_1 < 1 and rs_2 > 1:
@@ -76,7 +76,6 @@ class StartScreen(Screen):
             except IndexError as e:
                 INSUF_DATA.add(name)
                 # print(f"{e} Encountered. Halting procedure")
-
         return {"ls0.3": RS_LS0P3, "ls2gr1": RS_LS_TO_GR1, "gr2ls1": RS_HIGH_TO_LS1, "insuf": INSUF_DATA}
 
     def thurs_weekly_batch_report(self, data):
@@ -89,7 +88,7 @@ class StartScreen(Screen):
         for name, frame in data:
             # print(name)
             frame = frame[::-1].reset_index(drop=True)
-            date = frame.loc[0, "DATE"]
+            date = frame.loc[0, "date"]
             final_data = []
             count = 16
             while count > 0:
@@ -98,7 +97,7 @@ class StartScreen(Screen):
                         date -= timedelta(days=1)
                     else:
                         trading_date = previousTradingDay(date)
-                        d = frame[frame['DATE'] == trading_date.strftime("%Y/%m/%d")].values
+                        d = frame[frame['date'] == trading_date.strftime("%Y/%m/%d")].values
                         # print(d)
                         final_data.append(d[0])
                         date -= timedelta(days=7)
@@ -110,15 +109,15 @@ class StartScreen(Screen):
             if len(final_data) >= 16:
                 final_data = pd.DataFrame(final_data, columns=frame.columns)
 
-                close = np.array(final_data.loc[:, "CLOSE"])
+                close = np.array(final_data.loc[:, "close"])
                 pos_1 = [max(0, x) for x in (close[:14] - close[1:15])]
                 pos_2 = [max(0, x) for x in (close[1:15] - close[2:16])]
                 neg_1 = [-min(0, x) for x in (close[:14] - close[1:15])]
                 neg_2 = [-min(0, x) for x in (close[1:15] - close[2:16])]
-                rs_1 = np.sum(pos_1) / np.sum(neg_1)
-                rs_2 = np.sum(pos_2) / np.sum(neg_2)
-                roc_1 = close[0] / close[13]
-                roc_2 = close[1] / close[14]
+                rs_1 = round(np.sum(pos_1) / np.sum(neg_1), 2)
+                rs_2 = round(np.sum(pos_2) / np.sum(neg_2), 2)
+                roc_1 = round(close[0] / close[13], 2)
+                roc_2 = round(close[1] / close[14], 2)
 
                 if rs_1 <= 0.3:
                     RS_LS0P3.append((name, rs_1))
@@ -144,7 +143,7 @@ class StartScreen(Screen):
         for name, frame in data:
             # print(name)
             frame = frame[::-1].reset_index(drop=True)
-            date = frame.loc[0, "DATE"]
+            date = frame.loc[0, "date"]
             final_data = []
             count = 16
             while count > 0:
@@ -153,7 +152,7 @@ class StartScreen(Screen):
                         date -= timedelta(days=1)
                     else:
                         trading_date = previousTradingDay(date)
-                        d = frame[frame['DATE'] == trading_date.strftime("%Y/%m/%d")].values
+                        d = frame[frame['date'] == trading_date.strftime("%Y/%m/%d")].values
                         # print(d)
                         final_data.append(d[0])
                         date -= timedelta(days=7)
@@ -165,15 +164,15 @@ class StartScreen(Screen):
             if len(final_data) >= 16:
                 final_data = pd.DataFrame(final_data, columns=frame.columns)
 
-                close = np.array(final_data.loc[:, "CLOSE"])
+                close = np.array(final_data.loc[:, "close"])
                 pos_1 = [max(0, x) for x in (close[:14] - close[1:15])]
                 pos_2 = [max(0, x) for x in (close[1:15] - close[2:16])]
                 neg_1 = [-min(0, x) for x in (close[:14] - close[1:15])]
                 neg_2 = [-min(0, x) for x in (close[1:15] - close[2:16])]
-                rs_1 = np.sum(pos_1) / np.sum(neg_1)
-                rs_2 = np.sum(pos_2) / np.sum(neg_2)
-                roc_1 = close[0] / close[13]
-                roc_2 = close[1] / close[14]
+                rs_1 = round(np.sum(pos_1) / np.sum(neg_1), 2)
+                rs_2 = round(np.sum(pos_2) / np.sum(neg_2), 2)
+                roc_1 = round(close[0] / close[13], 2)
+                roc_2 = round(close[1] / close[14], 2)
 
                 if rs_1 <= 0.3:
                     RS_LS0P3.append((name, rs_1))
@@ -191,10 +190,10 @@ class StartScreen(Screen):
 
     def get_batch_report(self):
         cur = sqlite3.connect(dbpath).cursor()
-        columns = ["SYMBOL", "DATE", "CLOSE"]
-        data = pd.DataFrame(cur.execute("SELECT * FROM stocks"), columns=columns)
-        data['DATE'] = data['DATE'].apply(lambda x: datetime.datetime.strptime(x, "%Y/%m/%d"))
-        data = data.groupby("SYMBOL")
+        columns = ["symbol", "date", "close"]
+        data = pd.DataFrame(cur.execute(selected_symbols_query), columns=columns)
+        data['date'] = data['date'].apply(lambda x: datetime.datetime.strptime(x, "%Y/%m/%d"))
+        data = data.groupby("symbol")
         if not os.path.exists(report_dir_path):
             os.mkdir(report_dir_path)
         filename = rf"BatchReport - {datetime.datetime.today().date().strftime('%Y-%m-%d')}.txt"
@@ -209,26 +208,44 @@ class StartScreen(Screen):
             fp.write(
                 f"*** Batch Report for the 526 Symbols - {datetime.datetime.today().date().strftime('%Y/%m/%d')}***\n")
             fp.write(f"\nDAILY RS")
-            self.log(fp=fp, title="CATEGORY: RS < 0.3", list=daily_lists['ls0.3'])
-            self.log(fp=fp, title="CATEGORY: Present RS > 1, Past RS < 1", list=daily_lists['ls2gr1'])
-            self.log(fp=fp, title="CATEGORY: Present RS < 1, Past RS > 1", list=daily_lists['gr2ls1'])
+            self.log(fp=fp, title="CATEGORY: RS < 0.3 - BULLISH VIEW", list=daily_lists['ls0.3'])
+            self.log(fp=fp, title="CATEGORY: Present RS > 1, Past RS < 1 - BULLISH VIEW", list=daily_lists['ls2gr1'])
+            self.log(fp=fp, title="CATEGORY: Present RS < 1, Past RS > 1 - BEARISH VIEW", list=daily_lists['gr2ls1'])
             self.log(fp=fp, title="CATEGORY: Insufficient Data", list=daily_lists['insuf'])
             fp.write(f"\nWEEKLY - THURSDAY RS")
-            self.log(fp=fp, title="CATEGORY: RS < 0.3", list=thursday_lists['ls0.3'])
-            self.log(fp=fp, title="CATEGORY: Present RS > 1, Past RS < 1", list=thursday_lists['ls2gr1rs'])
-            self.log(fp=fp, title="CATEGORY: Present RS < 1, Past RS > 1", list=thursday_lists['gr2ls1rs'])
-            self.log(fp=fp, title="CATEGORY: Present ROC > 1, Past ROC < 1", list=thursday_lists['ls2gr1roc'])
-            self.log(fp=fp, title="CATEGORY: Present ROC < 1, Past ROC > 1", list=thursday_lists['gr2ls1roc'])
+            self.log(fp=fp, title="CATEGORY: RS < 0.3 - BULLISH VIEW", list=thursday_lists['ls0.3'])
+            self.log(fp=fp, title="CATEGORY: Present RS > 1, Past RS < 1 - BULLISH VIEW",
+                     list=thursday_lists['ls2gr1rs'])
+            self.log(fp=fp, title="CATEGORY: Present RS < 1, Past RS > 1 - BEARISH VIEW",
+                     list=thursday_lists['gr2ls1rs'])
+            self.log(fp=fp, title="CATEGORY: Present ROC > 1, Past ROC < 1 - BULLISH VIEW",
+                     list=thursday_lists['ls2gr1roc'])
+            self.log(fp=fp, title="CATEGORY: Present ROC < 1, Past ROC > 1 - BEARISH VIEW",
+                     list=thursday_lists['gr2ls1roc'])
             self.log(fp=fp, title="CATEGORY: Insufficient Data", list=thursday_lists['insuf'])
             fp.write(f"\nWEEKLY - FRIDAY RS")
-            self.log(fp=fp, title="CATEGORY: RS < 0.3", list=friday_lists['ls0.3'])
-            self.log(fp=fp, title="CATEGORY: Present RS > 1, Past RS < 1", list=friday_lists['ls2gr1rs'])
-            self.log(fp=fp, title="CATEGORY: Present RS < 1, Past RS > 1", list=friday_lists['gr2ls1rs'])
-            self.log(fp=fp, title="CATEGORY: Present ROC > 1, Past ROC < 1", list=friday_lists['ls2gr1roc'])
-            self.log(fp=fp, title="CATEGORY: Present ROC < 1, Past ROC > 1", list=friday_lists['gr2ls1roc'])
+            self.log(fp=fp, title="CATEGORY: RS < 0.3 - BULLISH VIEW", list=friday_lists['ls0.3'])
+            self.log(fp=fp, title="CATEGORY: Present RS > 1, Past RS < 1 - BULLISH VIEW", list=friday_lists['ls2gr1rs'])
+            self.log(fp=fp, title="CATEGORY: Present RS < 1, Past RS > 1 - BEARISH VIEW", list=friday_lists['gr2ls1rs'])
+            self.log(fp=fp, title="CATEGORY: Present ROC > 1, Past ROC < 1 - BULLISH VIEW",
+                     list=friday_lists['ls2gr1roc'])
+            self.log(fp=fp, title="CATEGORY: Present ROC < 1, Past ROC > 1 - BEARISH VIEW",
+                     list=friday_lists['gr2ls1roc'])
             self.log(fp=fp, title="CATEGORY: Insufficient Data", list=friday_lists['insuf'])
             fp.close()
             print("Batch Report creation successful")
+            popup = MDDialog(
+                title="Batch Report",
+                type="confirmation",
+                text=f"Batch Report created at {filepath}",
+                buttons=[
+                    MDFlatButton(
+                        text="OK",
+                        on_release=lambda x: popup.dismiss()
+                    )
+                ]
+            )
+            popup.open()
             return True
         except Exception as e:
             print(e)
@@ -301,11 +318,23 @@ class MaintainScreen(Screen):
         file = filechooser.open_file()
         print(file)
 
+
 class InputScreen(Screen):
     menu = None
     table_set = False
-    print("Entered Input Screen")
-    timeperiods = ["Daily", "Weekly - Monday", "Weekly - Tuesday", "Weekly - Wednesday", "Weekly - Thursday", "Weekly - Friday"]
+    # print("Entered Input Screen")
+    timeperiods = ["Daily", "Weekly - Monday", "Weekly - Tuesday", "Weekly - Wednesday", "Weekly - Thursday",
+                   "Weekly - Friday"]
+    previous_date = None
+    next_date = None
+    button_layout = None
+    symbol_now = None
+    next_symbol = None
+    prev_symbol = None
+    startdate_now = None
+    timeperiod_now = None
+    frequency_now = None
+
     def set_menu(self):
         selected_symbols = symbols
         if not self.ids['drop_item'].text.isspace():
@@ -441,37 +470,49 @@ class InputScreen(Screen):
             popup.open()
             return False
 
-        settings = {"symbol": symbol, "startdate": startdate, "timeperiod": timeperiod, "frequency": frequency}
-        self.build(settings)
+        self.symbol_now = symbol
+        self.next_symbol = symbols[(symbols.index(symbol) + 1) % len(symbols)]
+        self.prev_symbol = symbols[(symbols.index(symbol) - 1) % len(symbols)]
+        self.timeperiod_now = timeperiod
+        self.frequency_now = frequency
+        if startdate is None:
+            self.startdate_now = lastTradingDay(dbpath)
+            self.build(symbol=symbol, timeperiod=timeperiod, frequency=frequency)
+        else:
+            self.startdate_now = startdate
+            self.build(symbol=symbol, startdate=startdate, timeperiod=timeperiod, frequency=frequency)
 
-    def get_data(self, settings):
+    def get_data(self, symbol, startdate, timeperiod, frequency):
         db_conn = sqlite3.connect(database=dbpath)
         cur = db_conn.cursor()
 
         # data["DATE"] = data["DATE"].apply(lambda x: datetime.datetime.strptime(x, "%Y/%m/%d").date())
         # startdate = datetime.datetime.strptime(settings['startdate'], "%Y-%m-%d").date()
-        if settings['timeperiod'] == "Daily":
-            if settings['startdate'] is None:
-                # tmp = lastndaysdaily(lastTradingDay(dbpath), settings['frequency'])
-                startdate = lastndaysdaily(lastTradingDay(dbpath), 2 * settings['frequency'])
-            else:
-                startdate = lastndaysdaily(settings['startdate'], 2 * settings['frequency'])
-
-            # print(startdate)
-
-            data = pd.DataFrame(cur.execute("SELECT * FROM stocks WHERE symbol=:sym and date >= :dt",
-                                            {"sym": settings['symbol'],
-                                             "dt": startdate.strftime('%Y/%m/%d')}).fetchall(), columns=columns)
+        if timeperiod == "Daily":
+            dates = []
+            date = startdate
+            count = 2 * frequency
+            while count > 0:
+                if isHoliday(date):
+                    date -= datetime.timedelta(days=1)
+                else:
+                    dates.append(date.strftime("%Y/%m/%d"))
+                    date -= datetime.timedelta(days=1)
+                    count -= 1
+            dates.append(previousTradingDay(date).strftime("%Y/%m/%d"))
+            data = pd.DataFrame(
+                cur.execute(f"SELECT * FROM stocks WHERE date in {tuple(dates)} and symbol=:sym order by date",
+                            {"sym": symbol}).fetchall(), columns=columns)
             # print(data)
             # print(len(data))
-            final_data = self.process(data, settings)
+            final_data = self.process(data)
             return final_data
 
-        elif settings['timeperiod'] != "Time Period":
-            day = settings['timeperiod'].split(" - ")[-1]
+        elif timeperiod != "Time Period":
+            day = timeperiod.split(" - ")[-1]
             dates = []
-            date = lastTradingDay(dbpath)
-            count = 2 * settings['frequency']
+            date = startdate
+            count = 2 * frequency
             while count > 0:
                 if date.strftime("%A") == day:
                     dates.append(previousTradingDay(date).strftime("%Y/%m/%d"))
@@ -480,45 +521,46 @@ class InputScreen(Screen):
                 else:
                     date -= timedelta(days=1)
             dates.append(previousTradingDay(date).strftime("%Y/%m/%d"))
-            # print(dates)
-            # print(date)
-            # print(len(dates))
-            startdate = dates[-1]
-            data = pd.DataFrame(cur.execute("SELECT * FROM stocks WHERE symbol=:sym and date >= :dt",
-                                            {"sym": settings['symbol'], "dt": startdate}).fetchall(), columns=columns)
-            # print(len(data))
-            data = data[data['date'].isin(dates)].reset_index(drop=True)
-            # print(len(data))
-            final_data = self.process(data, settings)
+            data = pd.DataFrame(
+                cur.execute(f"SELECT * FROM stocks WHERE date in {tuple(dates)} and symbol=:sym order by date",
+                            {"sym": symbol}).fetchall(), columns=columns)
+
+            final_data = self.process(data)
             return final_data
 
-    def process(self, data, settings):
-        n = len(data)
-        data["pos"] = np.zeros(n)
-        data["neg"] = np.zeros(n)
-        data["last n pos"] = np.zeros(n)
-        data["last n neg"] = np.zeros(n)
-        data["rs"] = np.zeros(n)
-        data["roc"] = np.zeros(n)
+    def process(self, data):
 
-        for i in range(1, n):
-            data.loc[i, "pos"] = round(max(0, data.loc[i, "close"] - data.loc[i - 1, "close"]), 2)
-            data.loc[i, "neg"] = -round(min(0, data.loc[i, "close"] - data.loc[i - 1, "close"]), 2)
+        data['roc'] = pd.Series(np.zeros(len(data)))
+        for i in range(len(data)):
+            if i < self.frequency_now:
+                data.loc[i, 'roc'] = np.nan
+            else:
+                data.loc[i, 'roc'] = round(data.loc[i, 'close'] / data.loc[i - self.frequency_now + 1, 'close'], 2)
 
-        data = data[::-1].reset_index(drop=True)
+        data['pos'] = pd.Series(map(lambda x: round(max(0, x), 2), data['close'].diff(periods=1)))
+        data['neg'] = pd.Series(map(lambda x: round(max(0, -x), 2), data['close'].diff(periods=1)))
+        data['last n pos'] = data.loc[1:, 'pos'].rolling(window=self.frequency_now).sum().apply(lambda x: round(x, 2))
+        data['last n neg'] = data.loc[1:, 'neg'].rolling(window=self.frequency_now).sum().apply(lambda x: round(x, 2))
+        data = data.dropna().reset_index(drop=True)
+        data['rs'] = pd.Series(map(lambda x: round(x, 2), data['last n pos'] / data['last n neg']))
+        # print(data.to_string())
+        return data[['date', 'close', 'pos', 'neg', 'last n pos', 'last n neg', 'rs', 'roc']]
 
-        for i in range(0, n - settings['frequency']):
-            data.loc[i, 'last n pos'] = round(np.sum(data.loc[i: i + settings['frequency'] - 1, "pos"]), 2)
-            data.loc[i, 'last n neg'] = round(np.sum(data.loc[i: i + settings['frequency'] - 1, "neg"]), 2)
-            data.loc[i, "roc"] = round(data.loc[i, "close"] / data.loc[i + 13, "close"], 2)
-            data.loc[i, "rs"] = round(data.loc[i, "last n pos"] / data.loc[i, "last n neg"], 2)
-        data = data[::-1].reset_index(drop=True)
-        # print(data)
-        return data[(data["last n pos"] != 0) & (data["last n neg"] != 0)].reset_index(drop=True)
-
-    def build(self, settings):
-        stock_data = self.get_data(settings).drop("symbol", axis=1)
+    def build(self, symbol, timeperiod, frequency, startdate=lastTradingDay(dbpath)):
+        stock_data = self.get_data(symbol, startdate, timeperiod, frequency)
         # print(stock_data)
+        if self.timeperiod_now == "Daily":
+            self.previous_date = previousTradingDay(
+                datetime.datetime.strptime(stock_data.loc[0, 'date'], "%Y/%m/%d").date() - datetime.timedelta(days=1))
+            self.next_date = nextndaysdaily(
+                datetime.datetime.strptime(stock_data.loc[len(stock_data) - 1, 'date'], "%Y/%m/%d").date(),
+                self.frequency_now)
+        else:
+            self.previous_date = previousTradingDay(
+                datetime.datetime.strptime(stock_data.loc[0, 'date'], "%Y/%m/%d").date() - datetime.timedelta(days=7))
+            self.next_date = nextndaysweekly(datetime.datetime.strptime(stock_data.loc[len(stock_data) - 1, 'date'],
+                                                                        "%Y/%m/%d").date() + datetime.timedelta(days=7),
+                                             self.frequency_now)
         self.refresh_view(stock_data)
 
     def create_data(self, stock_data):
@@ -549,13 +591,13 @@ class InputScreen(Screen):
                 tmp_lbl.line_color = (0, 0, 0, 0.5)
                 tmp_lbl.halign = "center"
 
-                if i in [len(dates)-14, len(dates)-13, len(dates)-12]:
+                if i in [len(dates) - 14, len(dates) - 13, len(dates) - 12]:
                     tmp_lbl.md_bg_color = (.85, .30, .30, 0.5)
 
                 if i == np.argmax(stock_data['rs']) and c == "rs":
-                   tmp_lbl.md_bg_color = (1, 0, 0, 1)
+                    tmp_lbl.md_bg_color = (1, 0, 0, 1)
                 elif i == np.argmin(stock_data['rs']) and c == "rs":
-                   tmp_lbl.md_bg_color = (0, 1, 0, 1)
+                    tmp_lbl.md_bg_color = (0, 1, 0, 1)
 
                 if c.lower() == "rs" and i > 0:
                     if stock_data.loc[i, c] > 1 and stock_data.loc[i - 1, c] < 1:
@@ -570,20 +612,82 @@ class InputScreen(Screen):
     def refresh_view(self, data):
         data, cols, dates = self.create_data(data)
         table_obj = self.ids['table_box']
+        button_obj = self.ids['button_layout']
+
         if self.table_set:
             table_obj.clear_widgets()
+            button_obj.clear_widgets()
+
         table_obj.cols = len(cols)
-        table_obj.rows = len(dates)+1
-
-
+        table_obj.rows = len(dates) + 1
         for lbl in data:
             table_obj.add_widget(lbl)
+
         # print(len(data))
         # print(len(cols))
         # print(len(dates)+1)
         # assert len(data) == len(cols) * (len(dates)+1)
 
+        # button_obj.rows = 2
+        # button_obj.cols = 2
+        b1 = MDRectangleFlatButton(text="Previous Frame", pos_hint={"center_x": 0.3, "center_y": 0.7}, font_style="H5",
+                                   on_release=lambda _: self.alter_tables(symbol=self.symbol_now,
+                                                                          startdate=self.previous_date,
+                                                                          timeperiod=self.timeperiod_now,
+                                                                          frequency=self.frequency_now))
+        b2 = MDRectangleFlatButton(text="Next Frame", pos_hint={"center_x": 0.7, "center_y": 0.7}, font_style="H5",
+                                   on_release=lambda _: self.alter_tables(symbol=self.symbol_now,
+                                                                          startdate=self.next_date,
+                                                                          timeperiod=self.timeperiod_now,
+                                                                          frequency=self.frequency_now))
+        b3 = MDRectangleFlatButton(text="Previous Symbol", pos_hint={"center_x": 0.3, "center_y": 0.3}, font_style="H5",
+                                   on_press=lambda _: self.alter_tables(symbol=self.prev_symbol,
+                                                                        startdate=self.startdate_now,
+                                                                        timeperiod=self.timeperiod_now,
+                                                                        frequency=self.frequency_now))
+        b4 = MDRectangleFlatButton(text="Next Symbol", pos_hint={"center_x": 0.7, "center_y": 0.3}, font_style="H5",
+                                   on_press=lambda _: self.alter_tables(symbol=self.next_symbol,
+                                                                        startdate=self.startdate_now,
+                                                                        timeperiod=self.timeperiod_now,
+                                                                        frequency=self.frequency_now))
+        if self.symbol_now == symbols[0]:
+            b3.disabled = True
+        else:
+            b3.disabled = False
+
+        if self.symbol_now == symbols[-1]:
+            b4.disabled = True
+
+        else:
+            b4.disabled = False
+
+        if self.startdate_now == lastTradingDay(dbpath):
+            b2.disabled = True
+        else:
+            b2.disabled = False
+        button_obj.add_widget(b1)
+        button_obj.add_widget(b2)
+        button_obj.add_widget(b3)
+        button_obj.add_widget(b4)
         self.table_set = True
+
+    def alter_tables(self, symbol, startdate, timeperiod, frequency):
+        self.prev_symbol = symbols[(symbols.index(symbol) - 1) % len(symbols)]
+        self.symbol_now = symbol
+        self.next_symbol = symbols[(symbols.index(symbol) + 1) % len(symbols)]
+        self.ids['drop_item'].text = symbol
+        if timeperiod == "Daily":
+            self.previous_date = lastndaysdaily(startdate, frequency)
+            self.next_date = nextndaysdaily(startdate, frequency)
+        elif 'Weekly' in timeperiod:
+            day = timeperiod.split(" - ")[-1]
+            self.previous_date = lastndaysweekly(startdate, frequency, day)
+            self.next_date = nextndaysweekly(startdate, frequency)
+        self.startdate_now = startdate
+        self.timeperiod_now = timeperiod
+        self.frequency_now = frequency
+        self.build(symbol=symbol, startdate=startdate, timeperiod=timeperiod, frequency=frequency)
+
 
 class PasswordScreen(Screen):
 
