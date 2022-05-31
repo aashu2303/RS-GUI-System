@@ -34,6 +34,12 @@ class IconListItem(OneLineIconListItem):
 
 class StartScreen(Screen):
 
+    def nifty_snapshot(self):
+        print("NIFTY SNAPSHOT")
+
+    def banknifty_snapshot(self):
+        print("BANKNIFTY SNAPSHOT")
+
     def change_screen(self):
         if logged_in:
             self.manager.current = "maintain"
@@ -207,7 +213,7 @@ class StartScreen(Screen):
         try:
             fp = open(filepath, "w")
             fp.write(
-                f"*** Batch Report for the 526 Symbols - {datetime.datetime.today().date().strftime('%Y/%m/%d')}***\n")
+                f"*** Batch Report for the {len(data)} Symbols - {datetime.datetime.today().date().strftime('%Y/%m/%d')} ***\n")
             fp.write(f"\nDAILY RS")
             self.log(fp=fp, title="CATEGORY: RS < 0.3", list=daily_lists['ls0.3'])
             self.log(fp=fp, title="CATEGORY: Present RS > 1, Past RS < 1", list=daily_lists['ls2gr1'])
