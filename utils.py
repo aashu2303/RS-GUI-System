@@ -60,10 +60,10 @@ def nextndaysdaily(date, freq):
     return date
 
 def nextndaysweekly(date, freq):
-    count = freq+1
+    count = freq
     while count > 0:
         date += timedelta(days=7)
-        count += 1
+        count -= 1
     return previousTradingDay(date)
 
 def previousTradingDay(date):
