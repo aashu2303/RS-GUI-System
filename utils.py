@@ -49,23 +49,6 @@ def lastndaysweekly(date, freq, day):
             date -= timedelta(days=1)
     return previousTradingDay(date)
 
-def nextndaysdaily(date, freq):
-    count = freq+1
-    while count > 0:
-        if isHoliday(date):
-            date += timedelta(days=1)
-        else:
-            date += timedelta(days=1)
-            count -= 1
-    return date
-
-def nextndaysweekly(date, freq):
-    count = freq+1
-    while count > 0:
-        date += timedelta(days=7)
-        count += 1
-    return previousTradingDay(date)
-
 def previousTradingDay(date):
     while isHoliday(date):
         date -= timedelta(days=1)
