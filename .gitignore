@@ -4,3 +4,4 @@ Batch\ Reports/
 __pycache__/
 *.xlsx
 *.csv
+settings.py
