@@ -1,20 +1,4 @@
-import numpy as np
-from kivymd.app import MDApp
-from kivy.lang import Builder
-from kivy.metrics import dp
-from kivy.uix.screenmanager import Screen, ScreenManager
-from kivymd.uix.menu import MDDropdownMenu
-from kivymd.uix.button import MDFlatButton
-from kivymd.uix.list import OneLineIconListItem
-from kivymd.uix.dialog import MDDialog
-from kivy.properties import StringProperty
-from kivymd.uix.label import MDLabel
-from kivymd.uix.button import MDRectangleFlatButton
-from kivymd.uix.picker import MDDatePicker
-from kivy.core.window import Window
-from plyer import filechooser
-from utils import *
-import datetime
+from imports import *
 
 manager = ScreenManager()
 Window.set_title("Trading Strategy Visualizer")
@@ -516,10 +500,10 @@ class InputScreen(Screen):
             while count > 0:
                 if date.strftime("%A") == day:
                     dates.append(previousTradingDay(date).strftime("%Y/%m/%d"))
-                    date -= timedelta(days=7)
+                    date -= datetime.timedelta(days=7)
                     count -= 1
                 else:
-                    date -= timedelta(days=1)
+                    date -= datetime.timedelta(days=1)
             dates.append(previousTradingDay(date).strftime("%Y/%m/%d"))
             data = pd.DataFrame(
                 cur.execute(f"SELECT * FROM stocks WHERE date in {tuple(dates)} and symbol=:sym order by date",
@@ -584,7 +568,7 @@ class InputScreen(Screen):
                                              self.frequency_now)
         elif self.timeperiod_now == "Monthly":
             prev_date_tmp = datetime.datetime.strptime(stock_data.loc[0, 'date'], "%Y/%m/%d").date()
-            self.previous_date = prev_date_tmp - timedelta(days=prev_date_tmp.day)
+            self.previous_date = prev_date_tmp - datetime.timedelta(days=prev_date_tmp.day)
             next_date_tmp = datetime.datetime.strptime(stock_data.loc[len(stock_data) - 1, 'date'], "%Y/%m/%d").date()
             self.next_date = nextndaysmonthly(next_date_tmp, self.frequency_now)
 

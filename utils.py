@@ -1,9 +1,4 @@
-from settings import *
-from datetime import datetime, timedelta
-import sqlite3
-import os
-import pandas as pd
-
+from imports import *
 
 def isHoliday(date):
     name = date.strftime("%A")
@@ -22,9 +17,9 @@ def lastndaysdaily(date, freq):
     count = freq
     while count > 0:
         if isHoliday(date):
-            date -= timedelta(days=1)
+            date -= datetime.timedelta(days=1)
         else:
-            date -= timedelta(days=1)
+            date -= datetime.timedelta(days=1)
             count -= 1
     return date
 
@@ -33,9 +28,9 @@ def lastndaysweekly(date, freq, day):
     while count < freq:
         if date.strftime("%A") == day:
             count += 1
-            date -= timedelta(days=7)
+            date -= datetime.timedelta(days=7)
         else:
-            date -= timedelta(days=1)
+            date -= datetime.timedelta(days=1)
     return previousTradingDay(date)
 
 def lastndaysmonthly(date, freq):
@@ -44,10 +39,10 @@ def lastndaysmonthly(date, freq):
     while count > 0:
         if pd.to_datetime(date).is_month_end:
             dates.append(previousTradingDay(date))
-            date -= timedelta(days=date.day)
+            date -= datetime.timedelta(days=date.day)
             count -= 1
         else:
-            date -= timedelta(days=1)
+            date -= datetime.timedelta(days=1)
     dates.append(previousTradingDay(date))
     return dates
 
@@ -58,7 +53,7 @@ def lastndaysquarterly(date, freq):
         if pd.to_datetime(date).is_quarter_end:
             dates.append(previousTradingDay(date))
             count -= 1
-        date -= timedelta(days=date.day)
+        date -= datetime.timedelta(days=date.day)
     dates.append(previousTradingDay(date))
     return dates
 
@@ -66,29 +61,29 @@ def nextndaysdaily(date, freq):
     count = freq+1
     while count > 0:
         if isHoliday(date):
-            date += timedelta(days=1)
+            date += datetime.timedelta(days=1)
         else:
-            date += timedelta(days=1)
+            date += datetime.timedelta(days=1)
             count -= 1
     return nextTradingDay(date)
 
 def nextndaysweekly(date, freq):
     count = freq
     while count > 0:
-        date += timedelta(days=7)
+        date += datetime.timedelta(days=7)
         count -= 1
     return previousTradingDay(date)
 
 def nextMonthend(date):
-    date += timedelta(days=1)
+    date += datetime.timedelta(days=1)
     while not pd.to_datetime(date).is_month_end:
-        date += timedelta(days=1)
+        date += datetime.timedelta(days=1)
     return date
 
 def nextQuarterend(date):
-    date += timedelta(days=1)
+    date += datetime.timedelta(days=1)
     while not pd.to_datetime(date).is_quarter_end:
-        date += timedelta(days=1)
+        date += datetime.timedelta(days=1)
     return date
 def nextndaysmonthly(date, freq):
     dates = []
@@ -113,13 +108,13 @@ def nextndaysquarterly(date, freq):
 
 def previousTradingDay(date):
     while isHoliday(date):
-        date -= timedelta(days=1)
+        date -= datetime.timedelta(days=1)
     else:
         return date
 
 def nextTradingDay(date):
     while isHoliday(date):
-        date += timedelta(days=1)
+        date += datetime.timedelta(days=1)
     else:
         return date
 
