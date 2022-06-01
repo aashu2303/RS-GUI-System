@@ -28,6 +28,7 @@ ScreenManager:
             pos_hint: {"center_x": 0.5, "center_y": 0.87}
             size_hint: (0.5, 0.2)
             font_style: "H2"
+
         MDRectangleFlatButton:
             id: ssstart
             text: "START"
@@ -40,32 +41,8 @@ ScreenManager:
 
         MDRectangleFlatButton:
             id: ssmaintain
-            text: "BATCH REPORT"
-            pos_hint: {"center_x": 0.7, "center_y": 0.6}
-            size_hint: (0.35, 0.15)
-            on_release: root.get_batch_report()
-            font_style: "H3"
-
-        MDRectangleFlatButton:
-            id: ssniftysnap
-            text: "NIFTY SNAPSHOT"
-            pos_hint: {"center_x": 0.3, "center_y": 0.4}
-            size_hint: (0.35, 0.15)
-            font_style: "H3"
-            on_release: root.nifty_snapshot()
-
-        MDRectangleFlatButton:
-            id: ssbankniftysnap
-            text: "BANKNIFTY SNAPSHOT"
-            pos_hint: {"center_x": 0.7, "center_y": 0.4}
-            size_hint: (0.35, 0.15)
-            font_style: "H3"
-            on_release: root.banknifty_snapshot()
-
-        MDRectangleFlatButton:
-            id: ssmaintain
             text: "MAINTAIN"
-            pos_hint: {"center_x": 0.3, "center_y": 0.2}
+            pos_hint: {"center_x": 0.7, "center_y": 0.6}
             size_hint: (0.35, 0.15)
             on_release:
                 root.manager.current="maintain"
@@ -73,9 +50,25 @@ ScreenManager:
             font_style: "H3"
 
         MDRectangleFlatButton:
+            id: ssmaintain
+            text: "BATCH REPORT"
+            pos_hint: {"center_x": 0.3, "center_y": 0.4}
+            size_hint: (0.35, 0.15)
+            on_release: root.get_batch_report()
+            font_style: "H3"
+
+        MDRectangleFlatButton:
+            id: sssnap
+            text: "SNAPSHOT"
+            pos_hint: {"center_x": 0.7, "center_y": 0.4}
+            size_hint: (0.35, 0.15)
+            font_style: "H3"
+            on_release: root.snapshot()
+
+        MDRectangleFlatButton:
             id: ssquit
             text: "QUIT"
-            pos_hint: {"center_x": 0.7, "center_y": 0.2}
+            pos_hint: {"center_x": 0.5, "center_y": 0.2}
             size_hint: (0.35, 0.15)
             font_style: "H3"
             on_release:

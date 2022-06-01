@@ -1,6 +1,6 @@
 import sqlite3
 import pandas as pd
-from utils import dbpath, nse_holidays, symbols
+from settings import dbpath, nse_holidays, symbols
 import os
 from sqlite3 import IntegrityError
 

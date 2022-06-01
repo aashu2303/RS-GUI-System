@@ -1,5 +1,3 @@
-import time
-import pandas as pd
 import numpy as np
 from kivymd.app import MDApp
 from kivy.lang import Builder
@@ -12,7 +10,6 @@ from kivymd.uix.dialog import MDDialog
 from kivy.properties import StringProperty
 from kivymd.uix.label import MDLabel
 from kivymd.uix.button import MDRectangleFlatButton
-from kivymd.uix.gridlayout import MDGridLayout
 from kivymd.uix.picker import MDDatePicker
 from kivy.core.window import Window
 from plyer import filechooser
@@ -34,11 +31,8 @@ class IconListItem(OneLineIconListItem):
 
 class StartScreen(Screen):
 
-    def nifty_snapshot(self):
+    def snapshot(self):
         print("NIFTY SNAPSHOT")
-
-    def banknifty_snapshot(self):
-        print("BANKNIFTY SNAPSHOT")
 
     def change_screen(self):
         if logged_in:
@@ -330,7 +324,7 @@ class InputScreen(Screen):
     table_set = False
     # print("Entered Input Screen")
     timeperiods = ["Daily", "Weekly - Monday", "Weekly - Tuesday", "Weekly - Wednesday", "Weekly - Thursday",
-                   "Weekly - Friday"]
+                   "Weekly - Friday", "Monthly", "Quarterly"]
     previous_date = None
     next_date = None
     button_layout = None
@@ -514,7 +508,7 @@ class InputScreen(Screen):
             final_data = self.process(data)
             return final_data
 
-        elif timeperiod != "Time Period":
+        elif "Weekly" in timeperiod:
             day = timeperiod.split(" - ")[-1]
             dates = []
             date = startdate
@@ -531,6 +525,27 @@ class InputScreen(Screen):
                 cur.execute(f"SELECT * FROM stocks WHERE date in {tuple(dates)} and symbol=:sym order by date",
                             {"sym": symbol}).fetchall(), columns=columns)
 
+            final_data = self.process(data)
+            return final_data
+
+        elif timeperiod == "Monthly":
+            dates = lastndaysmonthly(startdate, 2 * frequency)
+            dates = list(map(lambda x: x.strftime("%Y/%m/%d"), dates))
+            # print(dates)
+            data = pd.DataFrame(
+                cur.execute(f"SELECT * FROM stocks WHERE date in {tuple(dates)} and symbol=:sym order by date",
+                            {"sym": symbol}).fetchall(), columns=columns)
+            final_data = self.process(data)
+            # print(final_data)
+            return final_data
+
+        elif timeperiod == "Quarterly":
+            dates = lastndaysquarterly(startdate, 2 * frequency)
+            dates = list(map(lambda x: x.strftime("%Y/%m/%d"), dates))
+            # print(dates)
+            data = pd.DataFrame(
+                cur.execute(f"SELECT * FROM stocks WHERE date in {tuple(dates)} and symbol=:sym order by date",
+                            {"sym": symbol}).fetchall(), columns=columns)
             final_data = self.process(data)
             return final_data
 
@@ -561,12 +576,18 @@ class InputScreen(Screen):
             self.next_date = nextndaysdaily(
                 datetime.datetime.strptime(stock_data.loc[len(stock_data) - 1, 'date'], "%Y/%m/%d").date(),
                 self.frequency_now)
-        else:
+        elif "Weekly" in self.timeperiod_now:
             self.previous_date = previousTradingDay(
                 datetime.datetime.strptime(stock_data.loc[0, 'date'], "%Y/%m/%d").date() - datetime.timedelta(days=7))
             self.next_date = nextndaysweekly(datetime.datetime.strptime(stock_data.loc[len(stock_data) - 1, 'date'],
                                                                         "%Y/%m/%d").date() + datetime.timedelta(days=7),
                                              self.frequency_now)
+        elif self.timeperiod_now == "Monthly":
+            prev_date_tmp = datetime.datetime.strptime(stock_data.loc[0, 'date'], "%Y/%m/%d").date()
+            self.previous_date = prev_date_tmp - timedelta(days=prev_date_tmp.day)
+            next_date_tmp = datetime.datetime.strptime(stock_data.loc[len(stock_data) - 1, 'date'], "%Y/%m/%d").date()
+            self.next_date = nextndaysmonthly(next_date_tmp, self.frequency_now)
+
         self.refresh_view(stock_data)
 
     def create_data(self, stock_data):

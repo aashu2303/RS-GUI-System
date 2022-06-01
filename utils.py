@@ -1,20 +1,9 @@
-import datetime
-from datetime import timedelta
-import os
+from settings import *
+from datetime import datetime, timedelta
 import sqlite3
+import os
 import pandas as pd
-from sql_queries import *
 
-LOGIN = str(7032655929)
-PASSWORD = "Aaseesh@4143"
-dbpath = os.path.join(os.getcwd(), "stockdata.db")
-nse_holidays = list(map(lambda x: x[0], sqlite3.connect(dbpath).cursor().execute("SELECT * FROM nse_holidays")))
-symbols = list(map(lambda x: x[0], sqlite3.connect(dbpath).cursor().execute(symbols_query)))
-columns = list(map(lambda x: x[0], sqlite3.connect(dbpath).cursor().execute(columns_query)))
-cwd = os.getcwd()
-report_dir_path = os.path.join(cwd, 'Batch Reports')
-datapath = r"C:\BHAVCOPY\EQ"
-bhavfilename = r"-NSE-EQ.txt"
 
 def isHoliday(date):
     name = date.strftime("%A")
@@ -49,6 +38,30 @@ def lastndaysweekly(date, freq, day):
             date -= timedelta(days=1)
     return previousTradingDay(date)
 
+def lastndaysmonthly(date, freq):
+    dates = []
+    count = freq
+    while count > 0:
+        if pd.to_datetime(date).is_month_end:
+            dates.append(previousTradingDay(date))
+            date -= timedelta(days=date.day)
+            count -= 1
+        else:
+            date -= timedelta(days=1)
+    dates.append(previousTradingDay(date))
+    return dates
+
+def lastndaysquarterly(date, freq):
+    dates = []
+    count = freq
+    while count > 0:
+        if pd.to_datetime(date).is_quarter_end:
+            dates.append(previousTradingDay(date))
+            count -= 1
+        date -= timedelta(days=date.day)
+    dates.append(previousTradingDay(date))
+    return dates
+
 def nextndaysdaily(date, freq):
     count = freq+1
     while count > 0:
@@ -57,7 +70,7 @@ def nextndaysdaily(date, freq):
         else:
             date += timedelta(days=1)
             count -= 1
-    return date
+    return nextTradingDay(date)
 
 def nextndaysweekly(date, freq):
     count = freq
@@ -66,9 +79,47 @@ def nextndaysweekly(date, freq):
         count -= 1
     return previousTradingDay(date)
 
+def nextMonthend(date):
+    date += timedelta(days=1)
+    while not pd.to_datetime(date).is_month_end:
+        date += timedelta(days=1)
+    return date
+
+def nextQuarterend(date):
+    date += timedelta(days=1)
+    while not pd.to_datetime(date).is_quarter_end:
+        date += timedelta(days=1)
+    return date
+def nextndaysmonthly(date, freq):
+    dates = []
+    count = freq + 1
+    date = nextMonthend(date)
+    while count > 0:
+        dates.append(previousTradingDay(nextMonthend(date)))
+        date = nextMonthend(date)
+        count -= 1
+    # return dates, date
+    return date
+
+def nextndaysquarterly(date, freq):
+    dates = []
+    count = freq + 1
+    date = nextQuarterend(date)
+    while count > 0:
+        dates.append(previousTradingDay(nextQuarterend(date)))
+        date = nextQuarterend(date)
+        count -= 1
+    return date
+
 def previousTradingDay(date):
     while isHoliday(date):
         date -= timedelta(days=1)
+    else:
+        return date
+
+def nextTradingDay(date):
+    while isHoliday(date):
+        date += timedelta(days=1)
     else:
         return date
 
@@ -97,5 +148,3 @@ def updateDb(dbpath):
                 print(f"{e} occured")
 
     return False
-if __name__ == '__main__':
-    previousTradingDay(datetime.datetime.strptime("2022-05-03", "%Y-%m-%d").date())
