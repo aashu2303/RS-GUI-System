@@ -500,10 +500,10 @@ class InputScreen(Screen):
             while count > 0:
                 if date.strftime("%A") == day:
                     dates.append(previousTradingDay(date).strftime("%Y/%m/%d"))
-                    date -= timedelta(days=7)
+                    date -= datetime.timedelta(days=7)
                     count -= 1
                 else:
-                    date -= timedelta(days=1)
+                    date -= datetime.timedelta(days=1)
             dates.append(previousTradingDay(date).strftime("%Y/%m/%d"))
             data = pd.DataFrame(
                 cur.execute(f"SELECT * FROM stocks WHERE date in {tuple(dates)} and symbol=:sym order by date",
