@@ -14,6 +14,8 @@ ScreenManager:
         name: "maintain"
     PasswordScreen:
         name: "password"
+    SnapshotScreen:
+        name: "snapshot"
 
 <IconListItem>:
     IconLeftWidget:
@@ -24,7 +26,7 @@ ScreenManager:
         id: ssbl
         MDRectangleFlatButton:
             id: title
-            text: "UI SYSTEM"
+            text: "RS SYSTEM"
             pos_hint: {"center_x": 0.5, "center_y": 0.87}
             size_hint: (0.5, 0.2)
             font_style: "H2"
@@ -63,7 +65,9 @@ ScreenManager:
             pos_hint: {"center_x": 0.7, "center_y": 0.4}
             size_hint: (0.35, 0.15)
             font_style: "H3"
-            on_release: root.snapshot()
+            on_release:
+                root.manager.current="snapshot"
+                root.manager.transition.direction="left"
 
         MDRectangleFlatButton:
             id: ssquit
@@ -274,3 +278,30 @@ ScreenManager:
                 font_style: "H5"
                 on_release:
                     root.updateHolidays()
+
+<IndexPopup>:
+    orientation: "vertical"
+    spacing: "12dp"
+    size_hint_y: None
+    height: "120dp"
+    MDTextField:
+        id: index_input
+        hint_text: "Enter Index Name"
+        on_text: if self.focus:  root.index_dd()
+        on_focus: if self.focus: root.index_dd()
+
+<SnapshotScreen>:
+    MDBoxLayout:
+        id: snsbl
+        orientation: "vertical"
+        spacing: 10
+        padding: 10, 10, 10, 10
+        MDGridLayout:
+            id: index_table_box
+            #md_bg_color: (0, 0, 1, 0.4)
+            adaptive_height: True
+        MDGridLayout:
+            id: comp_table_box
+            #md_bg_color: (0, 0, 1, 0.4)
+            #adaptive_height: True
+

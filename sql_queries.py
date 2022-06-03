@@ -20,3 +20,11 @@ insert_query = """
 selected_symbols_query = """
     SELECT * FROM stocks where symbol in (select symbol from symbol_list where flag='Y')
 """
+
+indices_query = """
+    SELECT index_name from index_list where flag='Y' order by index_name
+"""
+
+components_query = """
+    SELECT comp_name FROM index_comps where index_name=:index
+"""

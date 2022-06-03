@@ -1,4 +1,13 @@
-from imports import *
+from settings import *
+import sqlite3
+import os
+import datetime
+import pandas as pd
+
+nse_holidays = list(map(lambda x: x[0], sqlite3.connect(dbpath).cursor().execute("SELECT * FROM nse_holidays")))
+symbols = list(map(lambda x: x[0], sqlite3.connect(dbpath).cursor().execute(symbols_query)))
+columns = list(map(lambda x: x[0], sqlite3.connect(dbpath).cursor().execute(columns_query)))
+indices = list(map(lambda x: x[0], sqlite3.connect(dbpath).cursor().execute(indices_query)))
 
 def isHoliday(date):
     name = date.strftime("%A")
@@ -122,7 +131,7 @@ def updateDb(dbpath):
     dbconn = sqlite3.connect(dbpath)
     lastday = lastTradingDay(dbpath)
     while lastday < previousTradingDay(datetime.datetime.today().date()):
-        lastday += timedelta(days=1)
+        lastday += datetime.timedelta(days=1)
         print(lastday)
         if lastday.strftime("%Y-%m-%d") not in nse_holidays:
             filepath = os.path.join(datapath, lastday.strftime("%Y-%m-%d") + bhavfilename)

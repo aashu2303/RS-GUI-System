@@ -1,6 +1,23 @@
-from imports import *
+from kivymd.app import MDApp
+from kivy.lang import Builder
+from kivy.metrics import dp
+from kivy.uix.screenmanager import Screen, ScreenManager
+from kivymd.uix.menu import MDDropdownMenu
+from kivymd.uix.button import MDFlatButton
+from kivymd.uix.list import OneLineIconListItem
+from kivymd.uix.dialog import MDDialog
+from kivy.properties import StringProperty
+from kivymd.uix.label import MDLabel
+from kivymd.uix.button import MDRectangleFlatButton
+from kivymd.uix.picker import MDDatePicker
+from kivy.core.window import Window
+from kivy.uix.boxlayout import BoxLayout
+from plyer import filechooser
+import numpy as np
+from utils import *
 
 manager = ScreenManager()
+
 Window.set_title("Trading Strategy Visualizer")
 Window.maximize()
 dpi = Window.dpi
@@ -40,6 +57,7 @@ class StartScreen(Screen):
         RS_LS0P3 = []
         RS_HIGH_TO_LS1 = []
         RS_LS_TO_GR1 = []
+        RS_GR2 = []
         INSUF_DATA = set()
         for name, frame in data:
             frame = frame[::-1].reset_index(drop=True)
@@ -57,10 +75,12 @@ class StartScreen(Screen):
                     RS_HIGH_TO_LS1.append((name, rs_1))
                 if rs_1 > 1 and rs_2 < 1:
                     RS_LS_TO_GR1.append((name, rs_1))
+                if rs_1 > 2:
+                    RS_GR2.append((name, rs_1))
             except IndexError as e:
                 INSUF_DATA.add(name)
                 # print(f"{e} Encountered. Halting procedure")
-        return {"ls0.3": RS_LS0P3, "ls2gr1": RS_LS_TO_GR1, "gr2ls1": RS_HIGH_TO_LS1, "insuf": INSUF_DATA}
+        return {"ls0.3": RS_LS0P3, "ls2gr1": RS_LS_TO_GR1, "gr2ls1": RS_HIGH_TO_LS1, "gr2": RS_GR2, "insuf": INSUF_DATA}
 
     def thurs_weekly_batch_report(self, data):
         RS_LS0P3 = []
@@ -68,6 +88,7 @@ class StartScreen(Screen):
         RS_LS_TO_GR1 = []
         ROC_LS_TO_GR1 = []
         ROC_HIGH_TO_LS1 = []
+        RS_GR2 = []
         INSUF_DATA = set()
         for name, frame in data:
             # print(name)
@@ -78,13 +99,13 @@ class StartScreen(Screen):
             while count > 0:
                 try:
                     if date.strftime("%A") != "Thursday":
-                        date -= timedelta(days=1)
+                        date -= datetime.timedelta(days=1)
                     else:
                         trading_date = previousTradingDay(date)
                         d = frame[frame['date'] == trading_date.strftime("%Y/%m/%d")].values
                         # print(d)
                         final_data.append(d[0])
-                        date -= timedelta(days=7)
+                        date -= datetime.timedelta(days=7)
                         count -= 1
                 except IndexError as e:
                     INSUF_DATA.add(name)
@@ -113,8 +134,10 @@ class StartScreen(Screen):
                     ROC_LS_TO_GR1.append((name, roc_1))
                 if roc_1 < 1 and roc_2 > 1:
                     ROC_HIGH_TO_LS1.append((name, roc_1))
+                if rs_2 > 2:
+                    RS_GR2.append((name, rs_1))
 
-        return {"ls0.3": RS_LS0P3, "ls2gr1rs": RS_LS_TO_GR1, "gr2ls1rs": RS_HIGH_TO_LS1, "ls2gr1roc": ROC_LS_TO_GR1,
+        return {"ls0.3": RS_LS0P3, "ls2gr1rs": RS_LS_TO_GR1, "gr2ls1rs": RS_HIGH_TO_LS1, "gr2": RS_GR2, "ls2gr1roc": ROC_LS_TO_GR1,
                 "gr2ls1roc": ROC_HIGH_TO_LS1, "insuf": INSUF_DATA}
 
     def friday_weekly_batch_report(self, data):
@@ -123,6 +146,7 @@ class StartScreen(Screen):
         RS_LS_TO_GR1 = []
         ROC_LS_TO_GR1 = []
         ROC_HIGH_TO_LS1 = []
+        RS_GR2 = []
         INSUF_DATA = set()
         for name, frame in data:
             # print(name)
@@ -133,13 +157,13 @@ class StartScreen(Screen):
             while count > 0:
                 try:
                     if date.strftime("%A") != "Friday":
-                        date -= timedelta(days=1)
+                        date -= datetime.timedelta(days=1)
                     else:
                         trading_date = previousTradingDay(date)
                         d = frame[frame['date'] == trading_date.strftime("%Y/%m/%d")].values
                         # print(d)
                         final_data.append(d[0])
-                        date -= timedelta(days=7)
+                        date -= datetime.timedelta(days=7)
                         count -= 1
                 except IndexError as e:
                     INSUF_DATA.add(name)
@@ -168,8 +192,10 @@ class StartScreen(Screen):
                     ROC_LS_TO_GR1.append((name, roc_1))
                 if roc_1 < 1 and roc_2 > 1:
                     ROC_HIGH_TO_LS1.append((name, roc_1))
+                if rs_1 > 2:
+                    RS_GR2.append((name, rs_1))
 
-        return {"ls0.3": RS_LS0P3, "ls2gr1rs": RS_LS_TO_GR1, "gr2ls1rs": RS_HIGH_TO_LS1, "ls2gr1roc": ROC_LS_TO_GR1,
+        return {"ls0.3": RS_LS0P3, "ls2gr1rs": RS_LS_TO_GR1, "gr2ls1rs": RS_HIGH_TO_LS1, "gr2": RS_GR2, "ls2gr1roc": ROC_LS_TO_GR1,
                 "gr2ls1roc": ROC_HIGH_TO_LS1, "insuf": INSUF_DATA}
 
     def get_batch_report(self):
@@ -192,29 +218,33 @@ class StartScreen(Screen):
             fp.write(
                 f"*** Batch Report for the {len(data)} Symbols - {datetime.datetime.today().date().strftime('%Y/%m/%d')} ***\n")
             fp.write(f"\nDAILY RS")
-            self.log(fp=fp, title="CATEGORY: RS < 0.3 - BULLISH VIEW", list=daily_lists['ls0.3'])
-            self.log(fp=fp, title="CATEGORY: Present RS > 1, Past RS < 1 - BULLISH VIEW", list=daily_lists['ls2gr1'])
-            self.log(fp=fp, title="CATEGORY: Present RS < 1, Past RS > 1 - BEARISH VIEW", list=daily_lists['gr2ls1'])
+            self.log(fp=fp, title="CATEGORY: Daily RS < 0.3 - BULLISH VIEW", list=daily_lists['ls0.3'])
+            self.log(fp=fp, title="CATEGORY: RS Moving above 1 - BULLISH VIEW", list=daily_lists['ls2gr1'])
+            self.log(fp=fp, title="CATEGORY: RS Moving below 1 - BEARISH VIEW", list=daily_lists['gr2ls1'])
+            self.log(fp=fp, title="CATEGORY: Daily RS > 2 - BEARISH VIEW", list=daily_lists['gr2'])
             self.log(fp=fp, title="CATEGORY: Insufficient Data", list=daily_lists['insuf'])
             fp.write(f"\nWEEKLY - THURSDAY RS")
-            self.log(fp=fp, title="CATEGORY: RS < 0.3 - BULLISH VIEW", list=thursday_lists['ls0.3'])
-            self.log(fp=fp, title="CATEGORY: Present RS > 1, Past RS < 1 - BULLISH VIEW",
+            self.log(fp=fp, title="CATEGORY: Weekly RS < 0.3 - BULLISH VIEW", list=thursday_lists['ls0.3'])
+            self.log(fp=fp, title="CATEGORY: Weekly RS Moving above 1 - BULLISH VIEW",
                      list=thursday_lists['ls2gr1rs'])
-            self.log(fp=fp, title="CATEGORY: Present RS < 1, Past RS > 1 - BEARISH VIEW",
+            self.log(fp=fp, title="CATEGORY: Weekly RS Moving below 1 - BEARISH VIEW",
                      list=thursday_lists['gr2ls1rs'])
-            self.log(fp=fp, title="CATEGORY: Present ROC > 1, Past ROC < 1 - BULLISH VIEW",
+            self.log(fp=fp, title="CATEGORY: Weekly RS > 2 - BEARISH VIEW", list=thursday_lists['gr2'])
+            self.log(fp=fp, title="CATEGORY: Weekly ROC Moving above 1 - BULLISH VIEW",
                      list=thursday_lists['ls2gr1roc'])
-            self.log(fp=fp, title="CATEGORY: Present ROC < 1, Past ROC > 1 - BEARISH VIEW",
+            self.log(fp=fp, title="CATEGORY: Weekly ROC Moving below 1 - BEARISH VIEW",
                      list=thursday_lists['gr2ls1roc'])
             self.log(fp=fp, title="CATEGORY: Insufficient Data", list=thursday_lists['insuf'])
             fp.write(f"\nWEEKLY - FRIDAY RS")
-            self.log(fp=fp, title="CATEGORY: RS < 0.3 - BULLISH VIEW", list=friday_lists['ls0.3'])
-            self.log(fp=fp, title="CATEGORY: Present RS > 1, Past RS < 1 - BULLISH VIEW", list=friday_lists['ls2gr1rs'])
-            self.log(fp=fp, title="CATEGORY: Present RS < 1, Past RS > 1 - BEARISH VIEW", list=friday_lists['gr2ls1rs'])
-            self.log(fp=fp, title="CATEGORY: Present ROC > 1, Past ROC < 1 - BULLISH VIEW",
+            self.log(fp=fp, title="CATEGORY: Weekly RS < 0.3 - BULLISH VIEW", list=friday_lists['ls0.3'])
+            self.log(fp=fp, title="CATEGORY: Weekly RS Moving above 1 - BULLISH VIEW", list=friday_lists['ls2gr1rs'])
+            self.log(fp=fp, title="CATEGORY: Weekly RS Moving below 1 - BEARISH VIEW", list=friday_lists['gr2ls1rs'])
+            self.log(fp=fp, title="CATEGORY: Weekly RS > 2 - BEARISH VIEW", list=friday_lists['gr2'])
+            self.log(fp=fp, title="CATEGORY: Weekly ROC Moving above 1 - BULLISH VIEW",
                      list=friday_lists['ls2gr1roc'])
-            self.log(fp=fp, title="CATEGORY: Present ROC < 1, Past ROC > 1 - BEARISH VIEW",
+            self.log(fp=fp, title="CATEGORY: Weekly ROC Moving below 1 - BEARISH VIEW",
                      list=friday_lists['gr2ls1roc'])
+
             self.log(fp=fp, title="CATEGORY: Insufficient Data", list=friday_lists['insuf'])
             fp.close()
             print("Batch Report creation successful")
@@ -258,7 +288,7 @@ class MaintainScreen(Screen):
             popup.open()
         else:
             while lastday < previousTradingDay(datetime.datetime.today().date()):
-                lastday += timedelta(days=1)
+                lastday += datetime.timedelta(days=1)
                 if lastday.strftime("%Y/%m/%d") not in nse_holidays:
                     filepath = os.path.join(datapath, lastday.strftime("%Y-%m-%d") + bhavfilename)
                     csvfile = os.path.join(datapath, lastday.strftime("%Y-%m-%d") + "-NSE-EQ.csv")
@@ -489,7 +519,7 @@ class InputScreen(Screen):
                             {"sym": symbol}).fetchall(), columns=columns)
             # print(data)
             # print(len(data))
-            final_data = self.process(data)
+            final_data = self.process(data, frequency=frequency)
             return final_data
 
         elif "Weekly" in timeperiod:
@@ -509,7 +539,7 @@ class InputScreen(Screen):
                 cur.execute(f"SELECT * FROM stocks WHERE date in {tuple(dates)} and symbol=:sym order by date",
                             {"sym": symbol}).fetchall(), columns=columns)
 
-            final_data = self.process(data)
+            final_data = self.process(data, frequency=frequency)
             return final_data
 
         elif timeperiod == "Monthly":
@@ -519,7 +549,7 @@ class InputScreen(Screen):
             data = pd.DataFrame(
                 cur.execute(f"SELECT * FROM stocks WHERE date in {tuple(dates)} and symbol=:sym order by date",
                             {"sym": symbol}).fetchall(), columns=columns)
-            final_data = self.process(data)
+            final_data = self.process(data, frequency=frequency)
             # print(final_data)
             return final_data
 
@@ -530,22 +560,22 @@ class InputScreen(Screen):
             data = pd.DataFrame(
                 cur.execute(f"SELECT * FROM stocks WHERE date in {tuple(dates)} and symbol=:sym order by date",
                             {"sym": symbol}).fetchall(), columns=columns)
-            final_data = self.process(data)
+            final_data = self.process(data, frequency=frequency)
             return final_data
 
-    def process(self, data):
+    def process(self, data, frequency):
 
         data['roc'] = pd.Series(np.zeros(len(data)))
         for i in range(len(data)):
-            if i < self.frequency_now:
+            if i < frequency:
                 data.loc[i, 'roc'] = np.nan
             else:
-                data.loc[i, 'roc'] = round(data.loc[i, 'close'] / data.loc[i - self.frequency_now + 1, 'close'], 2)
+                data.loc[i, 'roc'] = round(data.loc[i, 'close'] / data.loc[i - frequency + 1, 'close'], 2)
 
         data['pos'] = pd.Series(map(lambda x: round(max(0, x), 2), data['close'].diff(periods=1)))
         data['neg'] = pd.Series(map(lambda x: round(max(0, -x), 2), data['close'].diff(periods=1)))
-        data['last n pos'] = data.loc[1:, 'pos'].rolling(window=self.frequency_now).sum().apply(lambda x: round(x, 2))
-        data['last n neg'] = data.loc[1:, 'neg'].rolling(window=self.frequency_now).sum().apply(lambda x: round(x, 2))
+        data['last n pos'] = data.loc[1:, 'pos'].rolling(window=frequency).sum().apply(lambda x: round(x, 2))
+        data['last n neg'] = data.loc[1:, 'neg'].rolling(window=frequency).sum().apply(lambda x: round(x, 2))
         data = data.dropna().reset_index(drop=True)
         data['rs'] = pd.Series(map(lambda x: round(x, 2), data['last n pos'] / data['last n neg']))
         # print(data.to_string())
@@ -747,6 +777,301 @@ class PasswordScreen(Screen):
             logged_in = True
             self.manager.current = "maintain"
             self.manager.transition.direction = "left"
+
+
+class IndexPopup(BoxLayout):
+    menu = None
+    index_name = None
+
+    def index_dd(self):
+        selected_indices = indices
+        if not self.ids['index_input'].text.isspace():
+            selected_indices = [sym for sym in indices if self.ids['index_input'].text.upper() in sym.upper()]
+        menu_items = [
+            {
+                "viewclass": "IconListItem",
+                "icon": "currency-inr",
+                "height": dp(56),
+                "text": sym,
+                "on_release": lambda x=sym: self.set_item(x, "index_input"),
+
+            } for sym in selected_indices]
+
+        if self.menu:
+            self.menu.dismiss()
+            self.menu = None
+
+        self.menu = MDDropdownMenu(
+            caller=self.ids['index_input'],
+            items=menu_items,
+            position="bottom",
+            width_mult=4,
+        )
+        self.menu.open()
+
+    def set_item(self, item, id):
+        self.ids[id].text = item
+        self.index_name = item
+        self.menu.dismiss()
+
+
+class SnapshotScreen(Screen):
+    menu = None
+    previous_index = None
+    index_now = None
+    next_index = None
+    popup = None
+    index_input = None
+    table_set = False
+
+    def get_data(self, symbols, startdate, timeperiod, frequency):
+        db_conn = sqlite3.connect(database=dbpath)
+        cur = db_conn.cursor()
+
+        if timeperiod == "Daily":
+            dates = []
+            date = startdate
+            count = 2 * frequency
+            while count > 0:
+                if isHoliday(date):
+                    date -= datetime.timedelta(days=1)
+                else:
+                    dates.append(date.strftime("%Y/%m/%d"))
+                    date -= datetime.timedelta(days=1)
+                    count -= 1
+            dates.append(previousTradingDay(date).strftime("%Y/%m/%d"))
+            data = pd.DataFrame(
+                cur.execute(
+                    f"SELECT * FROM stocks WHERE date in {tuple(dates)} and symbol in {tuple(symbols)} order by date").fetchall(),
+                columns=columns)
+
+            return data
+
+        elif "Weekly" in timeperiod:
+            day = timeperiod.split(" - ")[-1]
+            dates = []
+            date = startdate
+            count = 2 * frequency
+            while count > 0:
+                if date.strftime("%A") == day:
+                    dates.append(previousTradingDay(date).strftime("%Y/%m/%d"))
+                    date -= datetime.timedelta(days=7)
+                    count -= 1
+                else:
+                    date -= datetime.timedelta(days=1)
+            dates.append(previousTradingDay(date).strftime("%Y/%m/%d"))
+            data = pd.DataFrame(
+                cur.execute(
+                    f"SELECT * FROM stocks WHERE date in {tuple(dates)} and symbol in {tuple(symbols)} order by date").fetchall(),
+                columns=columns)
+
+            return data
+
+    def process(self, data, frequency):
+
+        data['pos'] = pd.Series(map(lambda x: round(max(0, x), 2), data['close'].diff(periods=1)))
+        data['neg'] = pd.Series(map(lambda x: round(max(0, -x), 2), data['close'].diff(periods=1)))
+        data['last n pos'] = data.loc[1:, 'pos'].rolling(window=frequency).sum().apply(lambda x: round(x, 2))
+        data['last n neg'] = data.loc[1:, 'neg'].rolling(window=frequency).sum().apply(lambda x: round(x, 2))
+        data = data.dropna().reset_index(drop=True)
+        data['rs'] = pd.Series(map(lambda x: round(x, 2), data['last n pos'] / data['last n neg']))
+        # print(data.to_string())
+        return data[['symbol', 'close', 'pos', 'neg', 'rs']]
+
+    def on_enter(self, *args):
+        index_input = IndexPopup()
+        self.popup = MDDialog(
+            title="Enter an index symbol",
+            type="custom",
+            content_cls=index_input,
+            size_hint=(0.8, 0.8),
+            buttons=[
+                MDFlatButton(
+                    text="CANCEL",
+                    on_release=lambda _: self.cancel_snap(),
+                ),
+                MDFlatButton(
+                    text="OK",
+                    on_release=lambda _: self.get_snapshot(),
+                ),
+            ],
+        )
+        self.index_input = index_input
+        self.popup.open()
+
+    def cancel_snap(self):
+        if self.popup:
+            self.popup.dismiss()
+        self.manager.current = "start"
+        self.manager.transition.direction = "right"
+
+    def validate(self):
+
+        index = self.index_input.index_name
+        if index not in indices:
+            popup = MDDialog(
+                title="Invalid Index",
+                text="Index not found in the list",
+                size_hint=(.5, .4),
+                buttons=[
+                    MDFlatButton(
+                        text="CLOSE", on_release=lambda x: popup.dismiss()
+                    )
+                ]
+            )
+            popup.open()
+            return True
+
+        self.index_now = index
+        self.previous_index = indices[(indices.index(index) - 1) % len(indices)]
+        self.next_index = indices[(indices.index(index) + 1) % len(indices)]
+        return False
+
+    def get_snapshot(self):
+        if self.popup:
+            self.popup.dismiss()
+        # self.manager.current = "start"
+        # self.manager.transition.direction = "right"
+        self.validate()
+        components = sqlite3.connect(dbpath).cursor().execute(components_query, {"index": self.index_now}).fetchall()
+        components = list(map(lambda x: x[0], components))
+        index = self.index_now
+        components.append(index)
+        daily_data = self.get_data(components, lastTradingDay(dbpath), "Daily", 14)
+        daily_data = daily_data.groupby('symbol')
+        daily_index_data = self.process(daily_data.get_group(index).reset_index(drop=True), 14).loc[1:, :].reset_index(
+            drop=True)
+        # print("Daily Index Data")
+        # print(daily_index_data)
+        daily_components_data = [daily_data.get_group(x).reset_index(drop=True) for x in components if x != index]
+        for i in range(len(daily_components_data)):
+            daily_components_data[i] = self.process(daily_components_data[i], 14)
+            daily_components_data[i] = daily_components_data[i].loc[len(daily_components_data[i]) - 3:, :].reset_index(drop=True)
+            # print(frame)
+
+        thurs_data = self.get_data(components, lastTradingDay(dbpath), "Weekly - Thursday", 14)
+        thurs_data = thurs_data.groupby('symbol')
+        thurs_index_data = self.process(thurs_data.get_group(index).reset_index(drop=True), 14).loc[1:, :].reset_index(
+            drop=True)
+        # print("Thursday Index Data")
+        # print(thurs_index_data)
+        thurs_components_data = [thurs_data.get_group(x).reset_index(drop=True) for x in components if x != index]
+        for i in range(len(thurs_components_data)):
+            thurs_components_data[i] = self.process(thurs_components_data[i], 14)
+            thurs_components_data[i] = thurs_components_data[i].loc[len(thurs_components_data[i]) - 3:, :].reset_index(drop=True)
+            # print(frfri_components_data[i]
+        fri_data = self.get_data(components, lastTradingDay(dbpath), "Weekly - Friday", 14)
+        fri_data = fri_data.groupby('symbol')
+        fri_index_data = self.process(fri_data.get_group(index).reset_index(drop=True), 14).loc[1:, :].reset_index(
+            drop=True)
+        # print("Friday Index Data")
+        # print(fri_index_data)
+        fri_components_data = [fri_data.get_group(x).reset_index(drop=True) for x in components if x != index]
+        for i in range(len(fri_components_data)):
+            fri_components_data[i] = self.process(fri_components_data[i], 14)
+            fri_components_data[i] = fri_components_data[i].loc[len(fri_components_data[i]) - 3:, :].reset_index(drop=True)
+            # print(frame)
+
+        table_data, comp_data = self.create_data(index_daily=daily_index_data, index_thurs=thurs_index_data,
+                                      index_fri=fri_index_data, comps_daily=daily_components_data,
+                                      comps_thurs=thurs_components_data, comps_fri=fri_components_data)
+
+        self.refresh_view(table_data, comp_data)
+        # print(table_data)
+        # print(len(table_data))
+
+    def create_data(self, index_daily, index_thurs, index_fri, comps_daily, comps_thurs, comps_fri):
+        heading_height = 26
+        row_height = 16
+        def create_label(text, height, linewidth=1, md_bg_color=(1, 1, 1, 1), line_color=(0, 0, 0, 1)):
+            label = MDLabel(text=text.upper())
+            label.size_hint_y = None
+            label.height = height
+            label.line_color = line_color
+            label.line_width = linewidth
+            label.halign = "center"
+            label.md_bg_color = md_bg_color
+            return label
+
+        index_name = self.index_now
+        table_data = []
+        col_data = []
+        cols1 = [index_name, "DAILY", "DAILY", "DAILY", "THURSDAY", "THURSDAY", "THURSDAY", "FRIDAY", "FRIDAY",
+                 "FRIDAY", " "]
+        cols2 = ["DAILY CLOSE", "POS", "NEG", "RS", "POS", "NEG", "RS", "POS", "NEG", "RS", "WEEKLY CLOSE"]
+        for c in cols1:
+            tmp_lbl = create_label(text=c, height=heading_height, md_bg_color=(.85, .80, .30, 0.8))
+            col_data.append(tmp_lbl)
+        table_data.append(col_data)
+        col_data = []
+        for c in cols2:
+            tmp_lbl = create_label(text=c, height=heading_height, md_bg_color=(.85, .80, .30, 0.8))
+            col_data.append(tmp_lbl)
+        table_data.append(col_data)
+
+        for i in range(14):
+            row_data = []
+            row_data.append(create_label(text=str(index_daily.loc[i, 'close']), height=row_height))
+            row_data.append(create_label(text=str(index_daily.loc[i, 'pos']), height=row_height))
+            row_data.append(create_label(text=str(index_daily.loc[i, 'neg']), height=row_height))
+            row_data.append(create_label(text=str(index_daily.loc[i, 'rs']), height=row_height))
+            row_data.append(create_label(text=str(index_thurs.loc[i, 'pos']), height=row_height))
+            row_data.append(create_label(text=str(index_thurs.loc[i, 'neg']), height=row_height))
+            row_data.append(create_label(text=str(index_thurs.loc[i, 'rs']), height=row_height))
+            row_data.append(create_label(text=str(index_fri.loc[i, 'pos']), height=row_height))
+            row_data.append(create_label(text=str(index_fri.loc[i, 'neg']), height=row_height))
+            row_data.append(create_label(text=str(index_fri.loc[i, 'rs']), height=row_height))
+            row_data.append(create_label(text=str(index_fri.loc[i, 'close']), height=row_height))
+            table_data.append(row_data)
+
+        comp_data = []
+        for i in range(len(comps_daily)):
+            row_data = []
+            comp_name = comps_daily[i].loc[:, 'symbol'].unique()[0]
+            row_data.append(create_label(text=comp_name, height=heading_height, md_bg_color=(.85, .80, .30, 0.8)))
+            # print(comp_name)
+            for _ in range(10):
+                row_data.append(create_label(text=" ", height=heading_height, md_bg_color=(.85, .80, .30, 0.8)))
+            comp_data.append(row_data)
+            for j in range(3):
+                row_data = []
+                row_data.append(create_label(text=str(comps_daily[i].loc[j, 'close']), height=row_height))
+                row_data.append(create_label(text=str(comps_daily[i].loc[j, 'pos']), height=row_height))
+                row_data.append(create_label(text=str(comps_daily[i].loc[j, 'neg']), height=row_height))
+                row_data.append(create_label(text=str(comps_daily[i].loc[j, 'rs']), height=row_height))
+                row_data.append(create_label(text=str(comps_thurs[i].loc[j, 'pos']), height=row_height))
+                row_data.append(create_label(text=str(comps_thurs[i].loc[j, 'neg']), height=row_height))
+                row_data.append(create_label(text=str(comps_thurs[i].loc[j, 'rs']), height=row_height))
+                row_data.append(create_label(text=str(comps_fri[i].loc[j, 'pos']), height=row_height))
+                row_data.append(create_label(text=str(comps_fri[i].loc[j, 'neg']), height=row_height))
+                row_data.append(create_label(text=str(comps_fri[i].loc[j, 'rs']), height=row_height))
+                row_data.append(create_label(text=str(comps_fri[i].loc[j, 'close']), height=row_height))
+                comp_data.append(row_data)
+
+        return np.array(table_data, dtype=object).flatten(), np.array(comp_data, dtype=object).flatten()
+
+    def refresh_view(self, index_data, comp_data):
+
+        # comp_data = self.create_data()
+        index_table_obj = self.ids['index_table_box']
+        comp_table_obj = self.ids['comp_table_box']
+        if self.table_set:
+            index_table_obj.clear_widgets()
+            comp_table_obj.clear_widgets()
+
+        index_table_obj.cols = 11
+        index_table_obj.rows = 16
+        for lbl in index_data:
+            index_table_obj.add_widget(lbl)
+
+        comp_table_obj.cols = 11
+        # print(len(comp_data))
+        comp_table_obj.rows = len(comp_data) // 11
+
+        for lbl in comp_data:
+            comp_table_obj.add_widget(lbl)
+
+        self.table_set = True
 
 
 class mainapp(MDApp):
