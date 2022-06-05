@@ -13,6 +13,7 @@ from kivymd.uix.picker import MDDatePicker
 from kivy.core.window import Window
 from kivy.uix.boxlayout import BoxLayout
 from plyer import filechooser
+from kivy.uix.anchorlayout import AnchorLayout
 import numpy as np
 from utils import *
 
@@ -597,10 +598,14 @@ class InputScreen(Screen):
                                                                         "%Y/%m/%d").date() + datetime.timedelta(days=7),
                                              self.frequency_now)
         elif self.timeperiod_now == "Monthly":
-            prev_date_tmp = datetime.datetime.strptime(stock_data.loc[0, 'date'], "%Y/%m/%d").date()
-            self.previous_date = prev_date_tmp - datetime.timedelta(days=prev_date_tmp.day)
+            self.previous_date = previousmonthEnd(datetime.datetime.strptime(stock_data.loc[0, 'date'], "%Y/%m/%d").date())
             next_date_tmp = datetime.datetime.strptime(stock_data.loc[len(stock_data) - 1, 'date'], "%Y/%m/%d").date()
             self.next_date = nextndaysmonthly(next_date_tmp, self.frequency_now)
+
+        elif self.timeperiod_now == "Quarterly":
+            self.previous_date = previousquarterEnd(datetime.datetime.strptime(stock_data.loc[0, 'date'], "%Y/%m/%d").date())
+            next_date_tmp = datetime.datetime.strptime(stock_data.loc[len(stock_data) - 1, 'date'], "%Y/%m/%d").date()
+            self.next_date = nextndaysquarterly(next_date_tmp, self.frequency_now)
 
         self.refresh_view(stock_data)
 
@@ -1055,9 +1060,12 @@ class SnapshotScreen(Screen):
         # comp_data = self.create_data()
         index_table_obj = self.ids['index_table_box']
         comp_table_obj = self.ids['comp_table_box']
+        buttons_obj = self.ids['buttons_box']
         if self.table_set:
             index_table_obj.clear_widgets()
             comp_table_obj.clear_widgets()
+            buttons_obj.clear_widgets()
+
 
         index_table_obj.cols = 11
         index_table_obj.rows = 16
@@ -1070,6 +1078,20 @@ class SnapshotScreen(Screen):
 
         for lbl in comp_data:
             comp_table_obj.add_widget(lbl)
+
+        def back_to_start():
+            self.manager.current = 'start'
+            self.manager.transition.direction = 'right'
+
+        back_anchor = AnchorLayout(anchor_x='center', anchor_y='center')
+        back_anchor.add_widget(
+            MDRectangleFlatButton(
+                text='Back',
+                font_style="H5",
+                on_release=lambda _: back_to_start()
+            )
+        )
+        buttons_obj.add_widget(back_anchor)
 
         self.table_set = True
 

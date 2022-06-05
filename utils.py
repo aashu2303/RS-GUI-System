@@ -55,6 +55,19 @@ def lastndaysmonthly(date, freq):
     dates.append(previousTradingDay(date))
     return dates
 
+def previousmonthEnd(date):
+    date -= datetime.timedelta(days=1)
+    while not pd.to_datetime(date).is_month_end:
+        date -= datetime.timedelta(days=1)
+    else:
+        return date
+
+def previousquarterEnd(date):
+    date = previousmonthEnd(date)
+    while not pd.to_datetime(date).is_quarter_end:
+        date = previousmonthEnd(date)
+    return date
+
 def lastndaysquarterly(date, freq):
     dates = []
     count = freq
@@ -90,9 +103,9 @@ def nextMonthend(date):
     return date
 
 def nextQuarterend(date):
-    date += datetime.timedelta(days=1)
+    date = nextMonthend(date)
     while not pd.to_datetime(date).is_quarter_end:
-        date += datetime.timedelta(days=1)
+        date = nextMonthend(date)
     return date
 def nextndaysmonthly(date, freq):
     dates = []
@@ -152,3 +165,9 @@ def updateDb(dbpath):
                 print(f"{e} occured")
 
     return False
+
+if __name__ == '__main__':
+    date = previousmonthEnd(datetime.datetime.today().date())
+    print(date)
+    print(previousmonthEnd(date))
+    print(previousquarterEnd(date))
