@@ -1,3 +1,4 @@
+from tkinter import Canvas
 from kivymd.app import MDApp
 from kivy.lang import Builder
 from kivy.metrics import dp
@@ -5,6 +6,8 @@ from kivy.uix.screenmanager import Screen, ScreenManager
 from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.button import MDFlatButton
 from kivymd.uix.list import OneLineIconListItem
+from kivymd.uix.list import OneLineAvatarIconListItem
+from kivymd.uix.list import IconRightWidget
 from kivymd.uix.dialog import MDDialog
 from kivy.properties import StringProperty
 from kivymd.uix.label import MDLabel
@@ -12,6 +15,8 @@ from kivymd.uix.button import MDRectangleFlatButton
 from kivymd.uix.picker import MDDatePicker
 from kivy.core.window import Window
 from kivy.uix.boxlayout import BoxLayout
+from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.behaviors.backgroundcolor_behavior import BackgroundColorBehavior
 from plyer import filechooser
 from kivy.uix.anchorlayout import AnchorLayout
 import numpy as np
@@ -575,12 +580,14 @@ class InputScreen(Screen):
 
         data['pos'] = pd.Series(map(lambda x: round(max(0, x), 2), data['close'].diff(periods=1)))
         data['neg'] = pd.Series(map(lambda x: round(max(0, -x), 2), data['close'].diff(periods=1)))
+        data['cldiff'] = pd.Series(map(lambda x: 1 if x>0 else 0, data['close'].diff(periods=1))) 
         data['last n pos'] = data.loc[1:, 'pos'].rolling(window=frequency).sum().apply(lambda x: round(x, 2))
         data['last n neg'] = data.loc[1:, 'neg'].rolling(window=frequency).sum().apply(lambda x: round(x, 2))
         data = data.dropna().reset_index(drop=True)
         data['rs'] = pd.Series(map(lambda x: round(x, 2), data['last n pos'] / data['last n neg']))
+        data['rsdiff'] = pd.Series(map(lambda x: 1 if x>0 else 0, data['rs'].diff(periods=1)))  
         # print(data.to_string())
-        return data[['date', 'close', 'pos', 'neg', 'last n pos', 'last n neg', 'rs', 'roc']]
+        return data[['date','cldiff', 'close', 'pos', 'neg', 'last n pos', 'last n neg', 'rsdiff', 'rs', 'roc']]  
 
     def build(self, symbol, timeperiod, frequency, startdate=lastTradingDay(dbpath)):
         stock_data = self.get_data(symbol, startdate, timeperiod, frequency)
@@ -609,6 +616,15 @@ class InputScreen(Screen):
 
         self.refresh_view(stock_data)
 
+    def get_divergence(self, cldiffflag, rsdiffflag):
+        if (cldiffflag == rsdiffflag):
+            return ' '
+        elif(cldiffflag == 1):
+            return 'minus'
+        else:
+            return 'plus'
+    
+
     def create_data(self, stock_data):
         dates = stock_data["date"].to_list()
         cols = stock_data.columns.to_list()
@@ -617,6 +633,8 @@ class InputScreen(Screen):
         table_data = []
         col_data = []
         for c in cols:
+            if (c=='rsdiff' or c=='cldiff'):
+                continue
             tmp_lbl = MDLabel(text=c.upper())
             tmp_lbl.size_hint_y = None
             tmp_lbl.height = 40
@@ -629,31 +647,61 @@ class InputScreen(Screen):
 
         for i in range(len(dates)):
             row_data = []
+            cldiffflag = -1
+            rsdiffflag = -1
             for c in cols:
-                tmp_lbl = MDLabel(text=str(stock_data.loc[i, c]))
-                tmp_lbl.size_hint_y = None
-                tmp_lbl.height = 30
-                tmp_lbl.line_width = 1
-                tmp_lbl.line_color = (0, 0, 0, 0.5)
-                tmp_lbl.halign = "center"
+                if(c=='cldiff'):
+                    cldiffflag = stock_data.loc[i,c]
+                    continue
+                elif(c=='rsdiff'):
+                    rsdiffflag = stock_data.loc[i,c]
+                    continue
 
-                if i in [len(dates) - 14, len(dates) - 13, len(dates) - 12]:
-                    tmp_lbl.md_bg_color = (.85, .30, .30, 0.5)
+                elif(c=='rs'):
+                    divergence = self.get_divergence(cldiffflag, rsdiffflag)
+                    tmp_lbl = MDBoxLayout(line_color = (0, 0, 0, 0.5))
+                    list_item = OneLineAvatarIconListItem(divider='Inset')
+                    list_item.height = 30
+                    if(divergence!=' '):
+                        div_icon = IconRightWidget(icon = divergence)
+                        list_item.add_widget(div_icon)
+                    lbl = MDLabel(text = str(stock_data.loc[i,c]), halign = 'right')
+                    tmp_lbl.add_widget(lbl)
+                    tmp_lbl.add_widget(list_item)                    
 
-                if i == np.argmax(stock_data['rs']) and c == "rs":
-                    tmp_lbl.md_bg_color = (1, 0, 0, 1)
-                elif i == np.argmin(stock_data['rs']) and c == "rs":
-                    tmp_lbl.md_bg_color = (0, 1, 0, 1)
+                    if i in [len(dates) - 14, len(dates) - 13, len(dates) - 12]:
+                        list_item.bg_color = (.85, .30, .30, 0.5)
+                        lbl.md_bg_color = (.85, .30, .30, 0.5)
+                    if i == np.argmax(stock_data['rs']):
+                        list_item.bg_color = (1, 0, 0, 1)
+                        lbl.md_bg_color = (1, 0, 0, 1)
+                    elif i == np.argmin(stock_data['rs']):
+                        list_item.bg_color = (0, 1, 0, 1)
+                        lbl.md_bg_color = (0, 1, 0, 1)
+                    if i > 0:
+                        if stock_data.loc[i, c] > 1 and stock_data.loc[i - 1, c] < 1:
+                            list_item.bg_color = (.30, 1, .30, 0.5)
+                            lbl.md_bg_color = (.30, 1, .30, 0.5)
+                        elif stock_data.loc[i, c] < 1 and stock_data.loc[i - 1, c] > 1:
+                            list_item.bg_color = (1, .30, .30, 0.5)
+                            lbl.md_bg_color = (1, .30, .30, 0.5)
 
-                if c.lower() == "rs" and i > 0:
-                    if stock_data.loc[i, c] > 1 and stock_data.loc[i - 1, c] < 1:
-                        tmp_lbl.md_bg_color = (.30, 1, .30, 0.5)
-                    elif stock_data.loc[i, c] < 1 and stock_data.loc[i - 1, c] > 1:
-                        tmp_lbl.md_bg_color = (1, .30, .30, 0.5)
+                if(c!='rs'):
+                    tmp_lbl = MDLabel(text=str(stock_data.loc[i, c]))
+                    tmp_lbl.halign = "center"
+                    tmp_lbl.size_hint_y = None
+                    tmp_lbl.height = 30
+                    tmp_lbl.line_width = 1
+                    tmp_lbl.line_color = (0, 0, 0, 0.5)
+                    if i in [len(dates) - 14, len(dates) - 13, len(dates) - 12]:
+                        tmp_lbl.md_bg_color = (.85, .30, .30, 0.5)
+
                 row_data.append(tmp_lbl)
             table_data.append(row_data)
 
         return np.array(table_data, dtype=object).flatten(), cols, dates
+
+    
 
     def refresh_view(self, data):
         data, cols, dates = self.create_data(data)
@@ -664,7 +712,7 @@ class InputScreen(Screen):
             table_obj.clear_widgets()
             button_obj.clear_widgets()
 
-        table_obj.cols = len(cols)
+        table_obj.cols = len(cols) - 2   
         table_obj.rows = len(dates) + 1
         for lbl in data:
             table_obj.add_widget(lbl)
