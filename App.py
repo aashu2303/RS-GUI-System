@@ -1,4 +1,3 @@
-from tkinter import Canvas
 from kivymd.app import MDApp
 from kivy.lang import Builder
 from kivy.metrics import dp
@@ -16,7 +15,6 @@ from kivymd.uix.picker import MDDatePicker
 from kivy.core.window import Window
 from kivy.uix.boxlayout import BoxLayout
 from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.behaviors.backgroundcolor_behavior import BackgroundColorBehavior
 from plyer import filechooser
 from kivy.uix.anchorlayout import AnchorLayout
 import numpy as np
@@ -143,7 +141,8 @@ class StartScreen(Screen):
                 if rs_2 > 2:
                     RS_GR2.append((name, rs_1))
 
-        return {"ls0.3": RS_LS0P3, "ls2gr1rs": RS_LS_TO_GR1, "gr2ls1rs": RS_HIGH_TO_LS1, "gr2": RS_GR2, "ls2gr1roc": ROC_LS_TO_GR1,
+        return {"ls0.3": RS_LS0P3, "ls2gr1rs": RS_LS_TO_GR1, "gr2ls1rs": RS_HIGH_TO_LS1, "gr2": RS_GR2,
+                "ls2gr1roc": ROC_LS_TO_GR1,
                 "gr2ls1roc": ROC_HIGH_TO_LS1, "insuf": INSUF_DATA}
 
     def friday_weekly_batch_report(self, data):
@@ -201,8 +200,98 @@ class StartScreen(Screen):
                 if rs_1 > 2:
                     RS_GR2.append((name, rs_1))
 
-        return {"ls0.3": RS_LS0P3, "ls2gr1rs": RS_LS_TO_GR1, "gr2ls1rs": RS_HIGH_TO_LS1, "gr2": RS_GR2, "ls2gr1roc": ROC_LS_TO_GR1,
+        return {"ls0.3": RS_LS0P3, "ls2gr1rs": RS_LS_TO_GR1, "gr2ls1rs": RS_HIGH_TO_LS1, "gr2": RS_GR2,
+                "ls2gr1roc": ROC_LS_TO_GR1,
                 "gr2ls1roc": ROC_HIGH_TO_LS1, "insuf": INSUF_DATA}
+
+    def monthly_batch_report(self, data):
+        RS_LS0P3 = []
+        RS_HIGH_TO_LS1 = []
+        RS_LS_TO_GR1 = []
+        ROC_LS_TO_GR1 = []
+        ROC_HIGH_TO_LS1 = []
+        RS_GR2 = []
+        INSUF_DATA = set()
+        for name, frame in data:
+            # print(name)
+            frame = frame[::-1].reset_index(drop=True)
+            date = frame.loc[0, "date"]
+            count = 16
+            dates = list(map(lambda x: x.strftime("%Y/%m/%d"), lastndaysmonthly(date, freq=count)))
+            final_data = frame[frame['date'].isin(dates)].reset_index(drop=True)
+            print(final_data)
+            if len(final_data) >= 16:
+                close = np.array(final_data.loc[:, "close"])
+                pos_1 = [max(0, x) for x in (close[:14] - close[1:15])]
+                pos_2 = [max(0, x) for x in (close[1:15] - close[2:16])]
+                neg_1 = [-min(0, x) for x in (close[:14] - close[1:15])]
+                neg_2 = [-min(0, x) for x in (close[1:15] - close[2:16])]
+                rs_1 = round(np.sum(pos_1) / np.sum(neg_1), 2)
+                rs_2 = round(np.sum(pos_2) / np.sum(neg_2), 2)
+                roc_1 = round(close[0] / close[13], 2)
+                roc_2 = round(close[1] / close[14], 2)
+
+                if rs_1 <= 0.3:
+                    RS_LS0P3.append((name, rs_1))
+                if rs_1 < 1 and rs_2 > 1:
+                    RS_HIGH_TO_LS1.append((name, rs_1))
+                if rs_1 > 1 and rs_2 < 1:
+                    RS_LS_TO_GR1.append((name, rs_1))
+                if roc_1 > 1 and roc_2 < 1:
+                    ROC_LS_TO_GR1.append((name, roc_1))
+                if roc_1 < 1 and roc_2 > 1:
+                    ROC_HIGH_TO_LS1.append((name, roc_1))
+                if rs_1 > 2:
+                    RS_GR2.append((name, rs_1))
+            else:
+                INSUF_DATA.add(name)
+
+        return {"ls0.3": RS_LS0P3, "ls2gr1rs": RS_LS_TO_GR1, "gr2ls1rs": RS_HIGH_TO_LS1, "gr2": RS_GR2,
+                "ls2gr1roc": ROC_LS_TO_GR1, "gr2ls1roc": ROC_HIGH_TO_LS1, "insuf": INSUF_DATA}
+
+    def quarterly_batch_report(self, data):
+        RS_LS0P3 = []
+        RS_HIGH_TO_LS1 = []
+        RS_LS_TO_GR1 = []
+        ROC_LS_TO_GR1 = []
+        ROC_HIGH_TO_LS1 = []
+        RS_GR2 = []
+        INSUF_DATA = set()
+        for name, frame in data:
+            # print(name)
+            frame = frame[::-1].reset_index(drop=True)
+            date = frame.loc[0, "date"]
+            count = 16
+            dates = lastndaysquarterly(date, freq=count)
+            final_data = frame[frame['date'].isin(dates)]
+            if len(final_data) >= 16:
+                close = np.array(final_data.loc[:, "close"])
+                pos_1 = [max(0, x) for x in (close[:14] - close[1:15])]
+                pos_2 = [max(0, x) for x in (close[1:15] - close[2:16])]
+                neg_1 = [-min(0, x) for x in (close[:14] - close[1:15])]
+                neg_2 = [-min(0, x) for x in (close[1:15] - close[2:16])]
+                rs_1 = round(np.sum(pos_1) / np.sum(neg_1), 2)
+                rs_2 = round(np.sum(pos_2) / np.sum(neg_2), 2)
+                roc_1 = round(close[0] / close[13], 2)
+                roc_2 = round(close[1] / close[14], 2)
+
+                if rs_1 <= 0.3:
+                    RS_LS0P3.append((name, rs_1))
+                if rs_1 < 1 and rs_2 > 1:
+                    RS_HIGH_TO_LS1.append((name, rs_1))
+                if rs_1 > 1 and rs_2 < 1:
+                    RS_LS_TO_GR1.append((name, rs_1))
+                if roc_1 > 1 and roc_2 < 1:
+                    ROC_LS_TO_GR1.append((name, roc_1))
+                if roc_1 < 1 and roc_2 > 1:
+                    ROC_HIGH_TO_LS1.append((name, roc_1))
+                if rs_1 > 2:
+                    RS_GR2.append((name, rs_1))
+            else:
+                INSUF_DATA.add(name)
+
+        return {"ls0.3": RS_LS0P3, "ls2gr1rs": RS_LS_TO_GR1, "gr2ls1rs": RS_HIGH_TO_LS1, "gr2": RS_GR2,
+                "ls2gr1roc": ROC_LS_TO_GR1, "gr2ls1roc": ROC_HIGH_TO_LS1, "insuf": INSUF_DATA}
 
     def get_batch_report(self):
         cur = sqlite3.connect(dbpath).cursor()
@@ -212,11 +301,13 @@ class StartScreen(Screen):
         data = data.groupby("symbol")
         if not os.path.exists(report_dir_path):
             os.mkdir(report_dir_path)
-        filename = rf"BatchReport - {datetime.datetime.today().date().strftime('%Y-%m-%d')}.txt"
+        filename = rf"BatchReport - {lastTradingDay(dbpath).strftime('%Y-%m-%d')}.txt"
 
         daily_lists = self.daily_batch_report(data)
         thursday_lists = self.thurs_weekly_batch_report(data)
         friday_lists = self.friday_weekly_batch_report(data)
+        monthly_lists = self.monthly_batch_report(data)
+        quarterly_lists = self.quarterly_batch_report(data)
 
         filepath = os.path.join(report_dir_path, filename)
         try:
@@ -250,8 +341,31 @@ class StartScreen(Screen):
                      list=friday_lists['ls2gr1roc'])
             self.log(fp=fp, title="CATEGORY: Weekly ROC Moving below 1 - BEARISH VIEW",
                      list=friday_lists['gr2ls1roc'])
-
             self.log(fp=fp, title="CATEGORY: Insufficient Data", list=friday_lists['insuf'])
+            fp.write(f"\nMONTHLY RS")
+            self.log(fp=fp, title="CATEGORY: Monthly RS < 0.3 - BULLISH VIEW", list=monthly_lists['ls0.3'])
+            self.log(fp=fp, title="CATEGORY: Monthly RS Moving above 1 - BULLISH VIEW",
+                        list=monthly_lists['ls2gr1rs'])
+            self.log(fp=fp, title="CATEGORY: Monthly RS Moving below 1 - BEARISH VIEW",
+                        list=monthly_lists['gr2ls1rs'])
+            self.log(fp=fp, title="CATEGORY: Monthly RS > 2 - BEARISH VIEW", list=monthly_lists['gr2'])
+            self.log(fp=fp, title="CATEGORY: Monthly ROC Moving above 1 - BULLISH VIEW",
+                        list=monthly_lists['ls2gr1roc'])
+            self.log(fp=fp, title="CATEGORY: Monthly ROC Moving below 1 - BEARISH VIEW",
+                        list=monthly_lists['gr2ls1roc'])
+            self.log(fp=fp, title="CATEGORY: Insufficient Data", list=monthly_lists['insuf'])
+            fp.write(f"\nQUARTERLY RS")
+            self.log(fp=fp, title="CATEGORY: Quarterly RS < 0.3 - BULLISH VIEW", list=quarterly_lists['ls0.3'])
+            self.log(fp=fp, title="CATEGORY: Quarterly RS Moving above 1 - BULLISH VIEW",
+                        list=quarterly_lists['ls2gr1rs'])
+            self.log(fp=fp, title="CATEGORY: Quarterly RS Moving below 1 - BEARISH VIEW",
+                        list=quarterly_lists['gr2ls1rs'])
+            self.log(fp=fp, title="CATEGORY: Quarterly RS > 2 - BEARISH VIEW", list=quarterly_lists['gr2'])
+            self.log(fp=fp, title="CATEGORY: Quarterly ROC Moving above 1 - BULLISH VIEW",
+                        list=quarterly_lists['ls2gr1roc'])
+            self.log(fp=fp, title="CATEGORY: Quarterly ROC Moving below 1 - BEARISH VIEW",
+                        list=quarterly_lists['gr2ls1roc'])
+            self.log(fp=fp, title="CATEGORY: Insufficient Data", list=quarterly_lists['insuf'])
             fp.close()
             print("Batch Report creation successful")
             popup = MDDialog(
@@ -580,14 +694,14 @@ class InputScreen(Screen):
 
         data['pos'] = pd.Series(map(lambda x: round(max(0, x), 2), data['close'].diff(periods=1)))
         data['neg'] = pd.Series(map(lambda x: round(max(0, -x), 2), data['close'].diff(periods=1)))
-        data['cldiff'] = pd.Series(map(lambda x: 1 if x>0 else 0, data['close'].diff(periods=1))) 
+        data['cldiff'] = pd.Series(map(lambda x: 1 if x > 0 else 0, data['close'].diff(periods=1)))
         data['last n pos'] = data.loc[1:, 'pos'].rolling(window=frequency).sum().apply(lambda x: round(x, 2))
         data['last n neg'] = data.loc[1:, 'neg'].rolling(window=frequency).sum().apply(lambda x: round(x, 2))
         data = data.dropna().reset_index(drop=True)
         data['rs'] = pd.Series(map(lambda x: round(x, 2), data['last n pos'] / data['last n neg']))
-        data['rsdiff'] = pd.Series(map(lambda x: 1 if x>0 else 0, data['rs'].diff(periods=1)))  
+        data['rsdiff'] = pd.Series(map(lambda x: 1 if x > 0 else 0, data['rs'].diff(periods=1)))
         # print(data.to_string())
-        return data[['date','cldiff', 'close', 'pos', 'neg', 'last n pos', 'last n neg', 'rsdiff', 'rs', 'roc']]  
+        return data[['date', 'cldiff', 'close', 'pos', 'neg', 'last n pos', 'last n neg', 'rsdiff', 'rs', 'roc']]
 
     def build(self, symbol, timeperiod, frequency, startdate=lastTradingDay(dbpath)):
         stock_data = self.get_data(symbol, startdate, timeperiod, frequency)
@@ -605,12 +719,14 @@ class InputScreen(Screen):
                                                                         "%Y/%m/%d").date() + datetime.timedelta(days=7),
                                              self.frequency_now)
         elif self.timeperiod_now == "Monthly":
-            self.previous_date = previousmonthEnd(datetime.datetime.strptime(stock_data.loc[0, 'date'], "%Y/%m/%d").date())
+            self.previous_date = previousmonthEnd(
+                datetime.datetime.strptime(stock_data.loc[0, 'date'], "%Y/%m/%d").date())
             next_date_tmp = datetime.datetime.strptime(stock_data.loc[len(stock_data) - 1, 'date'], "%Y/%m/%d").date()
             self.next_date = nextndaysmonthly(next_date_tmp, self.frequency_now)
 
         elif self.timeperiod_now == "Quarterly":
-            self.previous_date = previousquarterEnd(datetime.datetime.strptime(stock_data.loc[0, 'date'], "%Y/%m/%d").date())
+            self.previous_date = previousquarterEnd(
+                datetime.datetime.strptime(stock_data.loc[0, 'date'], "%Y/%m/%d").date())
             next_date_tmp = datetime.datetime.strptime(stock_data.loc[len(stock_data) - 1, 'date'], "%Y/%m/%d").date()
             self.next_date = nextndaysquarterly(next_date_tmp, self.frequency_now)
 
@@ -619,11 +735,10 @@ class InputScreen(Screen):
     def get_divergence(self, cldiffflag, rsdiffflag):
         if (cldiffflag == rsdiffflag):
             return ' '
-        elif(cldiffflag == 1):
+        elif (cldiffflag == 1):
             return 'minus'
         else:
             return 'plus'
-    
 
     def create_data(self, stock_data):
         dates = stock_data["date"].to_list()
@@ -633,7 +748,7 @@ class InputScreen(Screen):
         table_data = []
         col_data = []
         for c in cols:
-            if (c=='rsdiff' or c=='cldiff'):
+            if (c == 'rsdiff' or c == 'cldiff'):
                 continue
             tmp_lbl = MDLabel(text=c.upper())
             tmp_lbl.size_hint_y = None
@@ -650,24 +765,24 @@ class InputScreen(Screen):
             cldiffflag = -1
             rsdiffflag = -1
             for c in cols:
-                if(c=='cldiff'):
-                    cldiffflag = stock_data.loc[i,c]
+                if c == 'cldiff':
+                    cldiffflag = stock_data.loc[i, c]
                     continue
-                elif(c=='rsdiff'):
-                    rsdiffflag = stock_data.loc[i,c]
+                elif c == 'rsdiff':
+                    rsdiffflag = stock_data.loc[i, c]
                     continue
 
-                elif(c=='rs'):
+                elif c == 'rs':
                     divergence = self.get_divergence(cldiffflag, rsdiffflag)
-                    tmp_lbl = MDBoxLayout(line_color = (0, 0, 0, 0.5))
+                    tmp_lbl = MDBoxLayout(line_color=(0, 0, 0, 1))
                     list_item = OneLineAvatarIconListItem(divider='Inset')
                     list_item.height = 30
-                    if(divergence!=' '):
-                        div_icon = IconRightWidget(icon = divergence)
+                    if divergence != ' ':
+                        div_icon = IconRightWidget(icon=divergence)
                         list_item.add_widget(div_icon)
-                    lbl = MDLabel(text = str(stock_data.loc[i,c]), halign = 'right')
+                    lbl = MDLabel(text=str(stock_data.loc[i, c]), halign='right')
                     tmp_lbl.add_widget(lbl)
-                    tmp_lbl.add_widget(list_item)                    
+                    tmp_lbl.add_widget(list_item)
 
                     if i in [len(dates) - 14, len(dates) - 13, len(dates) - 12]:
                         list_item.bg_color = (.85, .30, .30, 0.5)
@@ -686,7 +801,7 @@ class InputScreen(Screen):
                             list_item.bg_color = (1, .30, .30, 0.5)
                             lbl.md_bg_color = (1, .30, .30, 0.5)
 
-                if(c!='rs'):
+                if c != 'rs':
                     tmp_lbl = MDLabel(text=str(stock_data.loc[i, c]))
                     tmp_lbl.halign = "center"
                     tmp_lbl.size_hint_y = None
@@ -701,8 +816,6 @@ class InputScreen(Screen):
 
         return np.array(table_data, dtype=object).flatten(), cols, dates
 
-    
-
     def refresh_view(self, data):
         data, cols, dates = self.create_data(data)
         table_obj = self.ids['table_box']
@@ -712,7 +825,7 @@ class InputScreen(Screen):
             table_obj.clear_widgets()
             button_obj.clear_widgets()
 
-        table_obj.cols = len(cols) - 2   
+        table_obj.cols = len(cols) - 2
         table_obj.rows = len(dates) + 1
         for lbl in data:
             table_obj.add_widget(lbl)
@@ -921,7 +1034,6 @@ class SnapshotScreen(Screen):
             return data
 
     def process(self, data, frequency):
-
         data['pos'] = pd.Series(map(lambda x: round(max(0, x), 2), data['close'].diff(periods=1)))
         data['neg'] = pd.Series(map(lambda x: round(max(0, -x), 2), data['close'].diff(periods=1)))
         data['last n pos'] = data.loc[1:, 'pos'].rolling(window=frequency).sum().apply(lambda x: round(x, 2))
@@ -999,7 +1111,8 @@ class SnapshotScreen(Screen):
         daily_components_data = [daily_data.get_group(x).reset_index(drop=True) for x in components if x != index]
         for i in range(len(daily_components_data)):
             daily_components_data[i] = self.process(daily_components_data[i], 14)
-            daily_components_data[i] = daily_components_data[i].loc[len(daily_components_data[i]) - 3:, :].reset_index(drop=True)
+            daily_components_data[i] = daily_components_data[i].loc[len(daily_components_data[i]) - 3:, :].reset_index(
+                drop=True)
             # print(frame)
 
         thurs_data = self.get_data(components, lastTradingDay(dbpath), "Weekly - Thursday", 14)
@@ -1011,7 +1124,8 @@ class SnapshotScreen(Screen):
         thurs_components_data = [thurs_data.get_group(x).reset_index(drop=True) for x in components if x != index]
         for i in range(len(thurs_components_data)):
             thurs_components_data[i] = self.process(thurs_components_data[i], 14)
-            thurs_components_data[i] = thurs_components_data[i].loc[len(thurs_components_data[i]) - 3:, :].reset_index(drop=True)
+            thurs_components_data[i] = thurs_components_data[i].loc[len(thurs_components_data[i]) - 3:, :].reset_index(
+                drop=True)
             # print(frfri_components_data[i]
         fri_data = self.get_data(components, lastTradingDay(dbpath), "Weekly - Friday", 14)
         fri_data = fri_data.groupby('symbol')
@@ -1022,20 +1136,29 @@ class SnapshotScreen(Screen):
         fri_components_data = [fri_data.get_group(x).reset_index(drop=True) for x in components if x != index]
         for i in range(len(fri_components_data)):
             fri_components_data[i] = self.process(fri_components_data[i], 14)
-            fri_components_data[i] = fri_components_data[i].loc[len(fri_components_data[i]) - 3:, :].reset_index(drop=True)
+            fri_components_data[i] = fri_components_data[i].loc[len(fri_components_data[i]) - 3:, :].reset_index(
+                drop=True)
             # print(frame)
 
         table_data, comp_data = self.create_data(index_daily=daily_index_data, index_thurs=thurs_index_data,
-                                      index_fri=fri_index_data, comps_daily=daily_components_data,
-                                      comps_thurs=thurs_components_data, comps_fri=fri_components_data)
+                                                 index_fri=fri_index_data, comps_daily=daily_components_data,
+                                                 comps_thurs=thurs_components_data, comps_fri=fri_components_data)
 
         self.refresh_view(table_data, comp_data)
         # print(table_data)
         # print(len(table_data))
+    def get_divergence(self, cldiffflag, rsdiffflag):
+        if (cldiffflag == rsdiffflag):
+            return ' '
+        elif (cldiffflag == 1):
+            return 'minus'
+        else:
+            return 'plus'
 
     def create_data(self, index_daily, index_thurs, index_fri, comps_daily, comps_thurs, comps_fri):
         heading_height = 26
-        row_height = 16
+        row_height = 20
+
         def create_label(text, height, linewidth=1, md_bg_color=(1, 1, 1, 1), line_color=(0, 0, 0, 1)):
             label = MDLabel(text=text.upper())
             label.size_hint_y = None
@@ -1052,33 +1175,114 @@ class SnapshotScreen(Screen):
         cols1 = [index_name, "DAILY", "DAILY", "DAILY", "THURSDAY", "THURSDAY", "THURSDAY", "FRIDAY", "FRIDAY",
                  "FRIDAY", " "]
         cols2 = ["DAILY CLOSE", "POS", "NEG", "RS", "POS", "NEG", "RS", "POS", "NEG", "RS", "WEEKLY CLOSE"]
+
         for c in cols1:
-            tmp_lbl = create_label(text=c, height=heading_height, md_bg_color=(.85, .80, .30, 0.8))
-            col_data.append(tmp_lbl)
-        table_data.append(col_data)
-        col_data = []
-        for c in cols2:
-            tmp_lbl = create_label(text=c, height=heading_height, md_bg_color=(.85, .80, .30, 0.8))
+            if (c == 'rsdiff' or c == 'cldiff'):
+                continue
+            tmp_lbl = MDLabel(text=c.upper())
+            tmp_lbl.size_hint_y = None
+            tmp_lbl.height = 40
+            tmp_lbl.line_width = 1
+            tmp_lbl.halign = "center"
+            tmp_lbl.md_bg_color = (.85, .80, .30, 0.8)
+            tmp_lbl.line_color = (0, 0, 0, 1)
             col_data.append(tmp_lbl)
         table_data.append(col_data)
 
-        for i in range(14):
+        col_data = []
+        for c in cols2:
+            if (c == 'rsdiff' or c == "cldiff"):
+                continue
+            tmp_lbl = MDLabel(text=c.upper())
+            tmp_lbl.size_hint_y = None
+            tmp_lbl.height = 40
+            tmp_lbl.line_width = 1
+            tmp_lbl.halign = "center"
+            tmp_lbl.md_bg_color = (.85, .80, .30, 0.8)
+            tmp_lbl.line_color = (0, 0, 0, 1)
+            col_data.append(tmp_lbl)
+        table_data.append(col_data)
+
+        master_table_data = []
+        for i, dataframe in enumerate([index_daily, index_thurs, index_fri]):
+            if i == 0:
+                dataframe = dataframe[['close', "pos", "neg", "rs"]]
+                data = index_daily
+            elif i == 1:
+                dataframe = dataframe[['pos', 'neg', "rs"]]
+                data = index_thurs
+            elif i == 2:
+                dataframe = dataframe[['pos', 'neg', "rs", "close"]]
+                data = index_fri
+            else:
+                data = None
+            cols = dataframe.columns
+            length = len(dataframe)
+            tmp_data = []
+            for i in range(len(dataframe)):
+                row_data = []
+                cldiffflag = -1
+                rsdiffflag = -1
+                for c in cols:
+                    if c == 'rs':
+                        tmp_lbl = MDBoxLayout(line_color=(0, 0, 0, 1))
+                        list_item = OneLineAvatarIconListItem(divider='Inset')
+                        list_item.height = row_height
+
+                        lbl = MDLabel(text=str(dataframe.loc[i, c]), halign='right')
+
+
+                        if i in [length - 14, length - 13, length - 12]:
+                            list_item.bg_color = (.85, .30, .30, 0.5)
+                            lbl.md_bg_color = (.85, .30, .30, 0.5)
+                        if i == np.argmax(dataframe['rs']):
+                            list_item.bg_color = (1, 0, 0, 1)
+                            lbl.md_bg_color = (1, 0, 0, 1)
+                        elif i == np.argmin(dataframe['rs']):
+                            list_item.bg_color = (0, 1, 0, 1)
+                            lbl.md_bg_color = (0, 1, 0, 1)
+                        if i > 0:
+                            if dataframe.loc[i, c] > 1 and dataframe.loc[i - 1, c] < 1:
+                                list_item.bg_color = (.30, 1, .30, 0.5)
+                                lbl.md_bg_color = (.30, 1, .30, 0.5)
+                            elif dataframe.loc[i, c] < 1 and dataframe.loc[i - 1, c] > 1:
+                                list_item.bg_color = (1, .30, .30, 0.5)
+                                lbl.md_bg_color = (1, .30, .30, 0.5)
+
+                            if data.loc[i, "close"] > data.loc[i-1, "close"] and data.loc[i, "rs"] < data.loc[i-1, "rs"]:
+                                div_icon = IconRightWidget(icon='minus')
+                                list_item.add_widget(div_icon)
+                            if data.loc[i, "close"] < data.loc[i-1, "close"] and data.loc[i, "rs"] > data.loc[i-1, "rs"]:
+                                div_icon = IconRightWidget(icon='plus')
+                                list_item.add_widget(div_icon)
+                        tmp_lbl.add_widget(lbl)
+                        tmp_lbl.add_widget(list_item)
+                    if c != 'rs':
+                        tmp_lbl = MDLabel(text=str(dataframe.loc[i, c]))
+                        tmp_lbl.halign = "center"
+                        tmp_lbl.size_hint_y = None
+                        tmp_lbl.height = row_height
+                        tmp_lbl.line_width = 1
+                        tmp_lbl.line_color = (0, 0, 0, 0.5)
+                        if i in [length - 14, length - 13, length - 12]:
+                            tmp_lbl.md_bg_color = (.85, .30, .30, 0.5)
+
+                    row_data.append(tmp_lbl)
+                tmp_data.append(row_data)
+            # print(dataframe)
+            master_table_data.append(tmp_data)
+        master_table_data = list(map(lambda x: np.array(x, dtype=object).flatten(), np.array(master_table_data, dtype=object).T))
+        master_table_data = np.array(master_table_data, dtype=object)
+        for row in master_table_data:
             row_data = []
-            row_data.append(create_label(text=str(index_daily.loc[i, 'close']), height=row_height))
-            row_data.append(create_label(text=str(index_daily.loc[i, 'pos']), height=row_height))
-            row_data.append(create_label(text=str(index_daily.loc[i, 'neg']), height=row_height))
-            row_data.append(create_label(text=str(index_daily.loc[i, 'rs']), height=row_height))
-            row_data.append(create_label(text=str(index_thurs.loc[i, 'pos']), height=row_height))
-            row_data.append(create_label(text=str(index_thurs.loc[i, 'neg']), height=row_height))
-            row_data.append(create_label(text=str(index_thurs.loc[i, 'rs']), height=row_height))
-            row_data.append(create_label(text=str(index_fri.loc[i, 'pos']), height=row_height))
-            row_data.append(create_label(text=str(index_fri.loc[i, 'neg']), height=row_height))
-            row_data.append(create_label(text=str(index_fri.loc[i, 'rs']), height=row_height))
-            row_data.append(create_label(text=str(index_fri.loc[i, 'close']), height=row_height))
+            for ls in row:
+                for l in ls:
+                    row_data.append(l)
             table_data.append(row_data)
 
         comp_data = []
-        for i in range(len(comps_daily)):
+        len_cmp_data = len(comps_daily)
+        for i in range(len_cmp_data):
             row_data = []
             comp_name = comps_daily[i].loc[:, 'symbol'].unique()[0]
             row_data.append(create_label(text=comp_name, height=heading_height, md_bg_color=(.85, .80, .30, 0.8)))
@@ -1086,21 +1290,76 @@ class SnapshotScreen(Screen):
             for _ in range(10):
                 row_data.append(create_label(text=" ", height=heading_height, md_bg_color=(.85, .80, .30, 0.8)))
             comp_data.append(row_data)
-            for j in range(3):
-                row_data = []
-                row_data.append(create_label(text=str(comps_daily[i].loc[j, 'close']), height=row_height))
-                row_data.append(create_label(text=str(comps_daily[i].loc[j, 'pos']), height=row_height))
-                row_data.append(create_label(text=str(comps_daily[i].loc[j, 'neg']), height=row_height))
-                row_data.append(create_label(text=str(comps_daily[i].loc[j, 'rs']), height=row_height))
-                row_data.append(create_label(text=str(comps_thurs[i].loc[j, 'pos']), height=row_height))
-                row_data.append(create_label(text=str(comps_thurs[i].loc[j, 'neg']), height=row_height))
-                row_data.append(create_label(text=str(comps_thurs[i].loc[j, 'rs']), height=row_height))
-                row_data.append(create_label(text=str(comps_fri[i].loc[j, 'pos']), height=row_height))
-                row_data.append(create_label(text=str(comps_fri[i].loc[j, 'neg']), height=row_height))
-                row_data.append(create_label(text=str(comps_fri[i].loc[j, 'rs']), height=row_height))
-                row_data.append(create_label(text=str(comps_fri[i].loc[j, 'close']), height=row_height))
-                comp_data.append(row_data)
 
+            comp_data_tmp = []
+            for ids, dataframe in enumerate([comps_daily[i], comps_thurs[i], comps_fri[i]]):
+                if ids == 0:
+                    dataframe = dataframe[['close', "pos", "neg", "rs"]]
+                    data = comps_daily[i]
+                elif ids == 1:
+                    dataframe = dataframe[['pos', 'neg', "rs"]]
+                    data = comps_thurs[i]
+                elif ids == 2:
+                    dataframe = dataframe[['pos', 'neg', "rs", "close"]]
+                    data = comps_fri[i]
+                else:
+                    data = None
+                cols = dataframe.columns
+                length = len(dataframe)
+                tmp_data_cols = []
+                for num in range(length):
+                    row_data = []
+                    for c in cols:
+
+                        if c == 'rs':
+                            tmp_lbl = MDBoxLayout(line_color=(0, 0, 0, 1))
+                            list_item = OneLineAvatarIconListItem(divider='Inset')
+                            list_item.height = row_height
+                            lbl = MDLabel(text=str(dataframe.loc[num, c]), halign='right')
+
+                            # if num == np.argmax(dataframe['rs']):
+                            #     list_item.bg_color = (1, 0, 0, 1)
+                            #     lbl.md_bg_color = (1, 0, 0, 1)
+                            # elif num == np.argmin(dataframe['rs']):
+                            #     list_item.bg_color = (0, 1, 0, 1)
+                            #     lbl.md_bg_color = (0, 1, 0, 1)
+                            if num > 0:
+                                if dataframe.loc[num, c] > 1 and dataframe.loc[num - 1, c] < 1:
+                                    list_item.bg_color = (.30, 1, .30, 0.5)
+                                    lbl.md_bg_color = (.30, 1, .30, 0.5)
+                                elif dataframe.loc[num, c] < 1 and dataframe.loc[num - 1, c] > 1:
+                                    list_item.bg_color = (1, .30, .30, 0.5)
+                                    lbl.md_bg_color = (1, .30, .30, 0.5)
+
+                                if data.loc[num, "close"] > data.loc[num - 1, "close"] and data.loc[num, 'rs'] < data.loc[num - 1, 'rs']:
+                                    div_icon = IconRightWidget(icon="minus")
+                                    list_item.add_widget(div_icon)
+                                elif data.loc[num, "close"] < data.loc[num - 1, "close"] and data.loc[num, 'rs'] > data.loc[num - 1, 'rs']:
+                                    div_icon = IconRightWidget(icon="plus")
+                                    list_item.add_widget(div_icon)
+
+                            tmp_lbl.add_widget(lbl)
+                            tmp_lbl.add_widget(list_item)
+
+                        elif c != 'rs':
+                            tmp_lbl = MDLabel(text=str(dataframe.loc[num, c]))
+                            tmp_lbl.halign = "center"
+                            tmp_lbl.size_hint_y = None
+                            tmp_lbl.height = row_height
+                            tmp_lbl.line_width = 1
+                            tmp_lbl.line_color = (0, 0, 0, 0.5)
+
+                        row_data.append(tmp_lbl)
+                    tmp_data_cols.append(row_data)
+                comp_data_tmp.append(tmp_data_cols)
+            comp_data_tmp = list(map(lambda x: np.array(x, dtype=object).flatten(), np.array(comp_data_tmp, dtype=object).T))
+            comp_data_tmp = np.array(comp_data_tmp, dtype=object)
+            for row in comp_data_tmp:
+                row_data = []
+                for ls in row:
+                    for l in ls:
+                        row_data.append(l)
+                comp_data.append(row_data)
         return np.array(table_data, dtype=object).flatten(), np.array(comp_data, dtype=object).flatten()
 
     def refresh_view(self, index_data, comp_data):
@@ -1113,7 +1372,6 @@ class SnapshotScreen(Screen):
             index_table_obj.clear_widgets()
             comp_table_obj.clear_widgets()
             buttons_obj.clear_widgets()
-
 
         index_table_obj.cols = 11
         index_table_obj.rows = 16

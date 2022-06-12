@@ -163,8 +163,8 @@ def updateDb(dbpath):
                 data.to_sql(name="stocks", con=dbconn, if_exists="append", index=False)
             except sqlite3.IntegrityError as e:
                 print(f"{e} occured")
-
-    return False
+                return False
+            return True
 
 if __name__ == '__main__':
     date = previousmonthEnd(datetime.datetime.today().date())
