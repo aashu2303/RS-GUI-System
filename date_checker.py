@@ -10,22 +10,34 @@ holidays_list = list(map(lambda x: datetime.datetime.strptime(x[0], "%Y-%m-%d"),
                          cursor.execute("SELECT distinct date FROM nse_holidays").fetchall()))
 # print(symbol_list)
 # print(len(symbol_list))
-print(holidays_list)
-
+# print(holidays_list)
+ls = []
 for sym in symbol_list:
     data = cursor.execute("SELECT date from stocks where symbol=:sym order by date", {"sym": sym}).fetchall()
-    data = list(map(lambda x: datetime.datetime.strptime(x[0], "%Y/%m/%d"), data))
+    data = list(map(lambda x: datetime.datetime.strptime(x[0], "%Y/%m/%d").date(), data))
 
     startdate = min(data)
     enddate = max(data)
-    with open("missed_dates.txt", "a+") as file:
-        file.write(f"{sym}\n")
-    ls = []
+
+    # print(f"Start : {startdate}")
+    # print(f"End : {enddate})
+    if sym != "NSENIFTY":
+        continue
+    print(sym)
     while startdate <= enddate:
-        if not (startdate in holidays_list or startdate.strftime("%A") == "Saturday" or startdate.strftime(
-                "%A") == "Sunday"):
-            if startdate not in data:
-                with open('missed_dates.txt', "a") as file:
-                    file.write(f"\t{startdate.strftime('%Y-%m-%d')}\n")
+        if startdate in holidays_list:
+            startdate += datetime.timedelta(days=1)
+            continue
+        if startdate.strftime("%A") == "Saturday" or startdate.strftime("%A") == "Sunday":
+            startdate += datetime.timedelta(days=1)
+            continue
+
+        if startdate not in data:
+            if startdate.strftime("%Y-%m-%d") not in ls:
+                ls.append(startdate.strftime("%Y-%m-%d"))
+
         startdate += datetime.timedelta(days=1)
-    print(sym, ls)
+    # print(ls)
+assert len(ls) == len(set(ls))
+ls.sort(key=lambda x: datetime.datetime.strptime(x, "%Y-%m-%d"))
+print(ls)

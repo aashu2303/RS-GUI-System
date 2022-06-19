@@ -52,8 +52,10 @@ class StartScreen(Screen):
             fp.write(f"\t\tNo symbols here\n")
         else:
             for i, sym in enumerate(list):
-                if type(sym) == tuple:
+                if type(sym) == tuple and len(sym) == 2:
                     fp.write(f"\t\t{i + 1}. {sym[0]} - {sym[1]}\n")
+                if type(sym) == tuple and len(sym) == 4:
+                    fp.write(f"\t\t{i + 1}. {sym[0]}, {sym[1]}, {sym[2]}, {sym[3]}\n")
                 elif type(sym) == str:
                     fp.write(f"\t\t{i + 1}. {sym}\n")
 
@@ -62,6 +64,8 @@ class StartScreen(Screen):
         RS_HIGH_TO_LS1 = []
         RS_LS_TO_GR1 = []
         RS_GR2 = []
+        CLOSE_GR5 = []
+        CLOSE_LS5 = []
         INSUF_DATA = set()
         for name, frame in data:
             frame = frame[::-1].reset_index(drop=True)
@@ -81,10 +85,14 @@ class StartScreen(Screen):
                     RS_LS_TO_GR1.append((name, rs_1))
                 if rs_1 > 2:
                     RS_GR2.append((name, rs_1))
+                if pos_1[13] / close[0] >= 0.05:
+                    CLOSE_GR5.append((name, close[0], pos_1[13], f"{round(pos_1[13] / close[0] * 100, 2)}%"))
+                if neg_1[13] / close[0] >= 0.05:
+                    CLOSE_LS5.append((name, close[0], neg_1[13], f"{round(neg_1[13] / close[0] * 100, 2)}%"))
             except IndexError as e:
                 INSUF_DATA.add(name)
                 # print(f"{e} Encountered. Halting procedure")
-        return {"ls0.3": RS_LS0P3, "ls2gr1": RS_LS_TO_GR1, "gr2ls1": RS_HIGH_TO_LS1, "gr2": RS_GR2, "insuf": INSUF_DATA}
+        return {"ls0.3": RS_LS0P3, "ls2gr1": RS_LS_TO_GR1, "gr2ls1": RS_HIGH_TO_LS1, "gr2": RS_GR2, "insuf": INSUF_DATA, "closegr5": CLOSE_GR5, "closels5": CLOSE_LS5}
 
     def thurs_weekly_batch_report(self, data):
         RS_LS0P3 = []
@@ -94,6 +102,8 @@ class StartScreen(Screen):
         ROC_HIGH_TO_LS1 = []
         RS_GR2 = []
         INSUF_DATA = set()
+        CLOSE_GR5 = []
+        CLOSE_LS5 = []
         for name, frame in data:
             # print(name)
             frame = frame[::-1].reset_index(drop=True)
@@ -140,10 +150,14 @@ class StartScreen(Screen):
                     ROC_HIGH_TO_LS1.append((name, roc_1))
                 if rs_2 > 2:
                     RS_GR2.append((name, rs_1))
+                if pos_1[13] / close[0] >= 0.05:
+                    CLOSE_GR5.append((name, close[0], pos_1[13], f"{round(pos_1[13] / close[0] * 100, 2)}%"))
+                if neg_1[13] / close[0] >= 0.05:
+                    CLOSE_LS5.append((name, close[0], neg_1[13], f"{round(neg_1[13] / close[0] * 100, 2)}%"))
 
         return {"ls0.3": RS_LS0P3, "ls2gr1rs": RS_LS_TO_GR1, "gr2ls1rs": RS_HIGH_TO_LS1, "gr2": RS_GR2,
                 "ls2gr1roc": ROC_LS_TO_GR1,
-                "gr2ls1roc": ROC_HIGH_TO_LS1, "insuf": INSUF_DATA}
+                "gr2ls1roc": ROC_HIGH_TO_LS1, "insuf": INSUF_DATA, "closegr5": CLOSE_GR5, "closels5": CLOSE_LS5}
 
     def friday_weekly_batch_report(self, data):
         RS_LS0P3 = []
@@ -153,6 +167,8 @@ class StartScreen(Screen):
         ROC_HIGH_TO_LS1 = []
         RS_GR2 = []
         INSUF_DATA = set()
+        CLOSE_GR5 = []
+        CLOSE_LS5 = []
         for name, frame in data:
             # print(name)
             frame = frame[::-1].reset_index(drop=True)
@@ -199,10 +215,14 @@ class StartScreen(Screen):
                     ROC_HIGH_TO_LS1.append((name, roc_1))
                 if rs_1 > 2:
                     RS_GR2.append((name, rs_1))
+                if pos_1[13] / close[0] >= 0.05:
+                    CLOSE_GR5.append((name, close[0], pos_1[13], f"{round(pos_1[13] / close[0] * 100, 2)}%"))
+                if neg_1[13] / close[0] >= 0.05:
+                    CLOSE_LS5.append((name, close[0], neg_1[13], f"{round(neg_1[13] / close[0] * 100, 2)}%"))
 
         return {"ls0.3": RS_LS0P3, "ls2gr1rs": RS_LS_TO_GR1, "gr2ls1rs": RS_HIGH_TO_LS1, "gr2": RS_GR2,
                 "ls2gr1roc": ROC_LS_TO_GR1,
-                "gr2ls1roc": ROC_HIGH_TO_LS1, "insuf": INSUF_DATA}
+                "gr2ls1roc": ROC_HIGH_TO_LS1, "insuf": INSUF_DATA, "closegr5": CLOSE_GR5, "closels5": CLOSE_LS5}
 
     def monthly_batch_report(self, data):
         RS_LS0P3 = []
@@ -212,6 +232,8 @@ class StartScreen(Screen):
         ROC_HIGH_TO_LS1 = []
         RS_GR2 = []
         INSUF_DATA = set()
+        CLOSE_GR5 = []
+        CLOSE_LS5 = []
         for name, frame in data:
             # print(name)
             frame = frame[::-1].reset_index(drop=True)
@@ -243,11 +265,15 @@ class StartScreen(Screen):
                     ROC_HIGH_TO_LS1.append((name, roc_1))
                 if rs_1 > 2:
                     RS_GR2.append((name, rs_1))
+                if pos_1[13] / close[0] >= 0.05:
+                    CLOSE_GR5.append((name, close[0], pos_1[13], f"{round(pos_1[13] / close[0] * 100, 2)}%"))
+                if neg_1[13] / close[0] >= 0.05:
+                    CLOSE_LS5.append((name, close[0], neg_1[13], f"{round(neg_1[13] / close[0] * 100, 2)}%"))
             else:
                 INSUF_DATA.add(name)
 
         return {"ls0.3": RS_LS0P3, "ls2gr1rs": RS_LS_TO_GR1, "gr2ls1rs": RS_HIGH_TO_LS1, "gr2": RS_GR2,
-                "ls2gr1roc": ROC_LS_TO_GR1, "gr2ls1roc": ROC_HIGH_TO_LS1, "insuf": INSUF_DATA}
+                "ls2gr1roc": ROC_LS_TO_GR1, "gr2ls1roc": ROC_HIGH_TO_LS1, "insuf": INSUF_DATA, "closegr5": CLOSE_GR5, "closels5": CLOSE_LS5}
 
     def quarterly_batch_report(self, data):
         RS_LS0P3 = []
@@ -257,6 +283,8 @@ class StartScreen(Screen):
         ROC_HIGH_TO_LS1 = []
         RS_GR2 = []
         INSUF_DATA = set()
+        CLOSE_GR5 = []
+        CLOSE_LS5 = []
         for name, frame in data:
             # print(name)
             frame = frame[::-1].reset_index(drop=True)
@@ -287,11 +315,15 @@ class StartScreen(Screen):
                     ROC_HIGH_TO_LS1.append((name, roc_1))
                 if rs_1 > 2:
                     RS_GR2.append((name, rs_1))
+                if pos_1[13] / close[0] >= 0.05:
+                    CLOSE_GR5.append((name, close[0], pos_1[13], f"{round(pos_1[13] / close[0] * 100, 2)}%"))
+                if neg_1[13] / close[0] >= 0.05:
+                    CLOSE_LS5.append((name, close[0], neg_1[13], f"{round(neg_1[13] / close[0] * 100, 2)}%"))
             else:
                 INSUF_DATA.add(name)
 
         return {"ls0.3": RS_LS0P3, "ls2gr1rs": RS_LS_TO_GR1, "gr2ls1rs": RS_HIGH_TO_LS1, "gr2": RS_GR2,
-                "ls2gr1roc": ROC_LS_TO_GR1, "gr2ls1roc": ROC_HIGH_TO_LS1, "insuf": INSUF_DATA}
+                "ls2gr1roc": ROC_LS_TO_GR1, "gr2ls1roc": ROC_HIGH_TO_LS1, "insuf": INSUF_DATA, "closegr5": CLOSE_GR5, "closels5": CLOSE_LS5}
 
     def get_batch_report(self):
         cur = sqlite3.connect(dbpath).cursor()
@@ -319,6 +351,8 @@ class StartScreen(Screen):
             self.log(fp=fp, title="CATEGORY: RS Moving above 1 - BULLISH VIEW", list=daily_lists['ls2gr1'])
             self.log(fp=fp, title="CATEGORY: RS Moving below 1 - BEARISH VIEW", list=daily_lists['gr2ls1'])
             self.log(fp=fp, title="CATEGORY: Daily RS > 2 - BEARISH VIEW", list=daily_lists['gr2'])
+            self.log(fp=fp, title="CATEGORY: CLOSE > 5% - BULLISH VIEW", list=daily_lists['closegr5'])
+            self.log(fp=fp, title="CATEGORY: CLOSE < 5% - BEARISH VIEW", list=daily_lists['closels5'])
             self.log(fp=fp, title="CATEGORY: Insufficient Data", list=daily_lists['insuf'])
             fp.write(f"\nWEEKLY - THURSDAY RS")
             self.log(fp=fp, title="CATEGORY: Weekly RS < 0.3 - BULLISH VIEW", list=thursday_lists['ls0.3'])
@@ -331,6 +365,8 @@ class StartScreen(Screen):
                      list=thursday_lists['ls2gr1roc'])
             self.log(fp=fp, title="CATEGORY: Weekly ROC Moving below 1 - BEARISH VIEW",
                      list=thursday_lists['gr2ls1roc'])
+            self.log(fp=fp, title="CATEGORY: CLOSE > 5% - BULLISH VIEW", list=thursday_lists['closegr5'])
+            self.log(fp=fp, title="CATEGORY: CLOSE < 5% - BEARISH VIEW", list=thursday_lists['closels5'])
             self.log(fp=fp, title="CATEGORY: Insufficient Data", list=thursday_lists['insuf'])
             fp.write(f"\nWEEKLY - FRIDAY RS")
             self.log(fp=fp, title="CATEGORY: Weekly RS < 0.3 - BULLISH VIEW", list=friday_lists['ls0.3'])
@@ -341,6 +377,8 @@ class StartScreen(Screen):
                      list=friday_lists['ls2gr1roc'])
             self.log(fp=fp, title="CATEGORY: Weekly ROC Moving below 1 - BEARISH VIEW",
                      list=friday_lists['gr2ls1roc'])
+            self.log(fp=fp, title="CATEGORY: CLOSE > 5% - BULLISH VIEW", list=friday_lists['closegr5'])
+            self.log(fp=fp, title="CATEGORY: CLOSE < 5% - BEARISH VIEW", list=friday_lists['closels5'])
             self.log(fp=fp, title="CATEGORY: Insufficient Data", list=friday_lists['insuf'])
             fp.write(f"\nMONTHLY RS")
             self.log(fp=fp, title="CATEGORY: Monthly RS < 0.3 - BULLISH VIEW", list=monthly_lists['ls0.3'])
@@ -353,6 +391,8 @@ class StartScreen(Screen):
                         list=monthly_lists['ls2gr1roc'])
             self.log(fp=fp, title="CATEGORY: Monthly ROC Moving below 1 - BEARISH VIEW",
                         list=monthly_lists['gr2ls1roc'])
+            self.log(fp=fp, title="CATEGORY: CLOSE > 5% - BULLISH VIEW", list=monthly_lists['closegr5'])
+            self.log(fp=fp, title="CATEGORY: CLOSE < 5% - BEARISH VIEW", list=monthly_lists['closels5'])
             self.log(fp=fp, title="CATEGORY: Insufficient Data", list=monthly_lists['insuf'])
             fp.write(f"\nQUARTERLY RS")
             self.log(fp=fp, title="CATEGORY: Quarterly RS < 0.3 - BULLISH VIEW", list=quarterly_lists['ls0.3'])
@@ -365,6 +405,8 @@ class StartScreen(Screen):
                         list=quarterly_lists['ls2gr1roc'])
             self.log(fp=fp, title="CATEGORY: Quarterly ROC Moving below 1 - BEARISH VIEW",
                         list=quarterly_lists['gr2ls1roc'])
+            self.log(fp=fp, title="CATEGORY: CLOSE > 5% - BULLISH VIEW", list=quarterly_lists['closegr5'])
+            self.log(fp=fp, title="CATEGORY: CLOSE < 5% - BEARISH VIEW", list=quarterly_lists['closels5'])
             self.log(fp=fp, title="CATEGORY: Insufficient Data", list=quarterly_lists['insuf'])
             fp.close()
             print("Batch Report creation successful")

@@ -3,10 +3,11 @@ import numpy as np
 import datetime
 import pandas as pd
 from utils import *
-import multiprocessing as mp
+from concurrent.futures import ThreadPoolExecutor
+from numba import jit, njit, vectorize
 
+@njit(nogil=True)
 def daily_batch_report(data):
-
     name, frame = data
     # print(f"{name} - Started")
     frame = frame[::-1].reset_index(drop=True)
@@ -20,16 +21,17 @@ def daily_batch_report(data):
         rs_2 = round(np.sum(pos_2) / np.sum(neg_2), 2)
         # print(f"{name} - Ended")
         if rs_1 <= 0.3:
-            return (name, rs_1, "ls0.3")
+            return np.array([name, rs_1, "ls0.3"])
         if rs_1 < 1 and rs_2 > 1:
-            return (name, rs_1, "gr2ls1")
+            return np.array([name, rs_1, "gr2ls1"])
         if rs_1 > 1 and rs_2 < 1:
-            return (name, rs_1, "ls2gr1")
+            return np.array([name, rs_1, "ls2gr1"])
 
     except IndexError as e:
-        return (name, None, "insuf")
+        return np.array([name, None, "insuf"])
         # print(f"{e} Encountered. Halting procedure")
 
+@njit(nogil=True)
 def thurs_weekly_batch_report(data):
     name, frame = data
 
@@ -47,11 +49,11 @@ def thurs_weekly_batch_report(data):
                 date -= datetime.timedelta(days=7)
                 count -= 1
         except IndexError as e:
-            return (name, None, "insuf")
+            return np.array([name, None, "insuf"])
             # print(f"{e} Encountered. Halting procedure")
     final_data = frame[frame['date'].isin(dates)].reset_index(drop=True)
-    print(final_data)
-    print(len(final_data))
+    # print(final_data)
+    # print(len(final_data))
     close = np.array(final_data.loc[:, "close"])
     if len(close) < 16:
         return (name, None, "insuf")
@@ -66,19 +68,17 @@ def thurs_weekly_batch_report(data):
     roc_2 = round(close[1] / close[14], 2)
 
     if rs_1 <= 0.3:
-        return (name, rs_1, "ls0.3")
+        return np.array([name, rs_1, "ls0.3"])
     if rs_1 < 1 and rs_2 > 1:
-        return (name, rs_1, "gr2ls1rs")
+        return np.array([name, rs_1, "gr2ls1rs"])
     if rs_1 > 1 and rs_2 < 1:
-        return (name, rs_1, "ls2gr1rs")
+        return np.array([name, rs_1, "ls2gr1rs"])
     if roc_1 > 1 and roc_2 < 1:
-        return (name, roc_1, "ls2gr1roc")
+        return np.array([name, roc_1, "ls2gr1roc"])
     if roc_1 < 1 and roc_2 > 1:
-        return (name, roc_2, "gr2ls1roc")
+        return np.array([name, roc_2, "gr2ls1roc"])
 
-
-
-
+@njit(nogil=True)
 def friday_weekly_batch_report(data):
     name, frame = data
 
@@ -96,14 +96,14 @@ def friday_weekly_batch_report(data):
                 date -= datetime.timedelta(days=7)
                 count -= 1
         except IndexError as e:
-            return (name, None, "insuf")
+            return np.array([name, None, "insuf"])
             # print(f"{e} Encountered. Halting procedure")
     final_data = frame[frame['date'].isin(dates)].reset_index(drop=True)
-    print(final_data)
-    print(len(final_data))
+    # print(final_data)
+    # print(len(final_data))
     close = np.array(final_data.loc[:, "close"])
     if len(close) < 16:
-        return (name, None, "insuf")
+        return np.array([name, None, "insuf"])
 
     pos_1 = [max(0, x) for x in (close[:14] - close[1:15])]
     pos_2 = [max(0, x) for x in (close[1:15] - close[2:16])]
@@ -115,21 +115,19 @@ def friday_weekly_batch_report(data):
     roc_2 = round(close[1] / close[14], 2)
 
     if rs_1 <= 0.3:
-        return (name, rs_1, "ls0.3")
+        return np.array([name, rs_1, "ls0.3"])
     if rs_1 < 1 and rs_2 > 1:
-        return (name, rs_1, "gr2ls1rs")
+        return np.array([name, rs_1, "gr2ls1rs"])
     if rs_1 > 1 and rs_2 < 1:
-        return (name, rs_1, "ls2gr1rs")
+        return np.array([name, rs_1, "ls2gr1rs"])
     if roc_1 > 1 and roc_2 < 1:
-        return (name, roc_1, "ls2gr1roc")
+        return np.array([name, roc_1, "ls2gr1roc"])
     if roc_1 < 1 and roc_2 > 1:
-        return (name, roc_2, "gr2ls1roc")
+        return np.array([name, roc_2, "gr2ls1roc"])
 
-def get_batch_report():
-    t1 = time.time()
-    data = pd.read_sql(sql=selected_symbols_query, con=sqlite3.connect(dbpath), columns=["symbol", "date", "close"])
-    data['date'] = data['date'].apply(lambda x: datetime.datetime.strptime(x, "%Y/%m/%d"))
-    data = list(data.groupby("symbol"))
+@njit(nogil=True)
+def get_batch_report(data):
+    # t1 = time.time()
     # t1 = time.time()
     daily_lists = []
     thurs_lists = []
@@ -142,24 +140,20 @@ def get_batch_report():
     print(daily_lists)
     print(thurs_lists)
     print(friday_lists)
-    t2 = time.time()
-    print(f"Time taken: {t2 - t1}")
+    # t2 = time.time()
+    # print(f"Time taken: {t2 - t1}")
 
 if __name__ == '__main__':
+    t1 = time.time()
+    data = pd.read_sql(sql=selected_symbols_query, con=sqlite3.connect(dbpath), columns=["symbol", "date", "close"])
+    data['date'] = data['date'].apply(lambda x: datetime.datetime.strptime(x, "%Y/%m/%d"))
+    data = list(data.groupby("symbol"))
 
-
-    # t1 = time.time()
-    # with mp.Pool() as pool:
-    #     daily_dicts = pool.map(func=daily_batch_report, iterable=data)
-    #     # thurs_dicts = pool.map(func=thurs_weekly_batch_report, iterable=data)
-    #     # friday_dicts = pool.map(func=friday_weekly_batch_report, iterable=data)
-    #
-    # print(daily_dicts)
-    # print(len(daily_dicts))
-    # t2 = time.time()
-    # print(f"Time taken: {t2-t1}")
+    get_batch_report(data)
+    t2 = time.time()
+    print(f"Time taken: {t2-t1}")
 
     # t1 = time.time()
-    get_batch_report()
+    # get_batch_report()
     # t2 = time.time()
     # print(f"Time taken: {t2-t1}")
